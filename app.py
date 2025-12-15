@@ -112,7 +112,7 @@ if EXCEL_FILE_PATH and Path(EXCEL_FILE_PATH).exists():
 # ===================== PIPELINE WRAPPER =====================
 pdf_chain = RunnableLambda(
     lambda i: route_message(
-        i["message"],
+        i,   # ⚠️ truyền CẢ dict, KHÔNG phải i["message"]
         llm=llm,
         lang_llm=lang_llm,
         retriever=retriever,
