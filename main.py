@@ -7,6 +7,8 @@ from typing import Optional, Any
 from datetime import datetime
 # Import thư viện cần thiết cho việc chạy hàm đồng bộ (nếu chatbot là đồng bộ)
 from starlette.concurrency import run_in_threadpool 
+from mst.router import is_mst_query
+from mst.handler import handle_mst_query
 
 # ===============================
 # Import Chatbot từ app.py
@@ -139,8 +141,19 @@ async def predict(data: Question):
     try:
         answer = None
         requires_contact = False
-        
-        # ✅ Gọi chatbot thực tế nếu có (Giả định app.py có chứa đối tượng chatbot)
+        # ====== CHECK MST INTENT (ƯU TIÊN CAO NHẤT) ======
+        if is_mst_query(question):
+            mst_answer = await run_in_threadpool(
+                handle_mst_query,
+                message=question,
+                llm=app.llm,
+                embedding=app.emb
+            )
+            return {
+                "answer": mst_answer,
+                "requires_contact": False
+            }
+        #  Gọi chatbot thực tế nếu có (Giả định app.py có chứa đối tượng chatbot)
         if CHATBOT_AVAILABLE and hasattr(app, "chatbot"):
             session = "api_session" 
             
