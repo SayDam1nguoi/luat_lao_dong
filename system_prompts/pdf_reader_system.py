@@ -86,8 +86,8 @@ PDF_READER_SYS = (
     "   c) Phần 'Nhóm này gồm':\n"
     "      - Liệt kê ĐẦY ĐỦ từng hoạt động đúng nguyên văn nội dung tài liệu.\n\n"
 
-    "   d) Phần 'Loại trừ' (nếu có):\n"
-    "      - Liệt kê ĐẦY ĐỦ từng nội dung loại trừ.\n\n"
+    "   d) Phần 'Mã ngành tương tự' (nếu có):\n"
+    "      - Hãy kể tên một số mã ngành có ngành nghề tương tự liên quan đến ngành nghề được nêu tên.\n\n"
 
     "3) Không được:\n"
     "   - Gộp nhiều gạch đầu dòng thành một ý.\n"
