@@ -115,4 +115,32 @@ PDF_READER_SYS = (
     "- Có dữ liệu → PHẢI trả lời đầy đủ.\n"
     "- Mã ngành → KHÔNG ĐƯỢC TÓM TẮT.\n"
     "- Luôn nêu căn cứ pháp lý ngay câu đầu tiên.\n"
+
+    "4) Quy định BẮT BUỘC về đối chiếu phiên bản mã ngành:\n"
+    " - Khi trong nội dung cung cấp có đồng thời dữ liệu của Hệ thống ngành kinh tế hiện hành "
+    "(ban hành theo Quyết định số 36/2025/QĐ-TTg) "
+    "và dữ liệu của Hệ thống ngành kinh tế cũ "
+    "(ban hành theo Quyết định số 27/2018/QĐ-TTg), "
+    "THÌ BẮT BUỘC phải thực hiện đối chiếu.\n\n"
+
+    "   - Việc đối chiếu PHẢI được trình bày thành MỘT MỤC RIÊNG, "
+    "đặt tên đúng nguyên văn là:\n"
+    "'Đối chiếu với Hệ thống ngành kinh tế Việt Nam theo Quyết định số 27/2018/QĐ-TTg'.\n\n"
+
+    "   - Nội dung mục đối chiếu PHẢI bao gồm đầy đủ các ý sau (nếu tài liệu có):\n"
+    "      + Mã ngành tương ứng theo VSIC 2018.\n"
+    "      + Tên ngành theo VSIC 2018.\n"
+    "      + Nhận định pháp lý rõ ràng:\n"
+    "        • Giữ nguyên so với VSIC 2018; hoặc\n"
+    "        • Thay đổi tên ngành; hoặc\n"
+    "        • Thay đổi phạm vi hoạt động; hoặc\n"
+    "        • Bị tách, gộp hoặc bãi bỏ.\n\n"
+
+    "   - Nếu mã ngành KHÔNG TỒN TẠI trong VSIC 2018, "
+    "PHẢI nêu rõ: 'Mã ngành này không được quy định trong Hệ thống ngành kinh tế Việt Nam "
+    "ban hành theo Quyết định số 27/2018/QĐ-TTg'.\n\n"
+
+    "   - TUYỆT ĐỐI KHÔNG suy đoán, "
+    "không sử dụng các cụm từ như 'có thể', 'nhiều khả năng', 'tương đương'.\n\n"
+
 )

@@ -7,10 +7,10 @@ from typing import List, Dict, Any
 from dotenv import load_dotenv
 load_dotenv(override=True)
 
-from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_openai import OpenAIEmbeddings
 from langchain_pinecone import Pinecone
 from pinecone import Pinecone as PineconeClient, PodSpec
+
 
 # ===================== CẤU HÌNH =====================
 OPENAI_API_KEY = os.getenv("OPENAI__API_KEY")
@@ -18,11 +18,12 @@ OPENAI_EMBEDDING_MODEL = os.getenv("OPENAI__EMBEDDING_MODEL")
 
 PINECONE_API_KEY = os.getenv("PINECONE_API_KEY")
 PINECONE_ENVIRONMENT = os.getenv("PINECONE_ENVIRONMENT")
-PINECONE_INDEX_NAME = os.getenv("PINECONE_INDEX_NAME")
+PINECONE_INDEX_NAME = os.getenv("PINECONE_INDEX_NAME_MSN_2018")
 
 EMBEDDING_DIM = 3072
-JSON_FOLDER = r"C:\Users\tabao\OneDrive\Desktop\cong_viec_lam\json"
+JSON_FOLDER = r"C:\Users\tabao\OneDrive\Desktop\cong_viec_lam\data_msn_2018"
 BATCH_SIZE = 30
+
 
 # ===================== INIT =====================
 print("🔧 Khởi tạo Pinecone & Embedding...")
@@ -45,8 +46,8 @@ emb = OpenAIEmbeddings(
 
 print("✅ Sẵn sàng\n")
 
-# ===================== UTIL =====================
 
+# ===================== UTIL =====================
 def get_json_files_from_folder(folder: str) -> List[str]:
     if not os.path.exists(folder):
         return []
@@ -75,23 +76,40 @@ def create_or_get_index(index_name: str, force: bool = False):
 
     return pc.Index(index_name)
 
-# ===================== LOAD + CHUNK JSON (01–99) =====================
 
+# ===================== VSIC HELPERS =====================
+def detect_level(code: str) -> str:
+    """
+    Xác định cấp VSIC dựa vào mã
+    """
+    if not code:
+        return "unknown"
+
+    if code.isalpha():
+        return "section"      # A, B, C
+
+    if code.isdigit():
+        if len(code) == 2:
+            return "division"     # 01
+        if len(code) == 3:
+            return "group"        # 011
+        if len(code) == 4:
+            return "class"        # 0118
+        if len(code) == 5:
+            return "subclass"     # 01110
+
+    return "unknown"
+
+
+# ===================== LOAD JSON (MAPPING) =====================
 def load_and_chunk_json(file_path: str) -> List[Dict[str, Any]]:
     """
-    JSON format chuẩn:
+    JSON dạng mapping phẳng:
     {
-      "source": "...pdf",
-      "document": "Quyết định 36/2025/QĐ-TTg",
-      "content_type": "economic_system_sections_01_99",
-      "sections": {
-        "01": {
-          "section_code": "01",
-          "section_title": "...",
-          "text": "FULL TEXT"
-        },
+        "A": "NÔNG NGHIỆP, LÂM NGHIỆP VÀ THUỶ SẢN",
+        "01": "Nông nghiệp và hoạt động dịch vụ có liên quan",
+        "01110": "Trồng lúa",
         ...
-      }
     }
     """
     filename = os.path.basename(file_path)
@@ -100,39 +118,31 @@ def load_and_chunk_json(file_path: str) -> List[Dict[str, Any]]:
         with open(file_path, "r", encoding="utf-8") as f:
             data = json.load(f)
 
-        sections = data.get("sections")
-        if not isinstance(sections, dict):
-            print(f"⚠️ {filename} không có sections hợp lệ")
+        if not isinstance(data, dict):
+            print(f"⚠️ {filename} không phải JSON object")
             return []
-
-        splitter = RecursiveCharacterTextSplitter(
-            chunk_size=3000,
-            chunk_overlap=300,
-            separators=["\n\n", "\n", ". ", " ", ""]
-        )
 
         docs: List[Dict[str, Any]] = []
 
-        for section_code, section in sections.items():
-            text = section.get("text", "").strip()
-            if not text:
+        for code, name in data.items():
+            if not isinstance(name, str):
                 continue
 
-            chunks = splitter.split_text(text)
+            name_clean = name.strip()
+            if not name_clean:
+                continue
 
-            for i, chunk in enumerate(chunks):
-                docs.append({
-                    "text": chunk,
-                    "metadata": {
-                        "source": filename,
-                        "original_source": data.get("source", ""),
-                        "document": data.get("document", ""),
-                        "content_type": data.get("content_type", ""),
-                        "section_code": section_code,
-                        "section_title": section.get("section_title", ""),
-                        "chunk_id": i
-                    }
-                })
+            text = f"Mã ngành {code}: {name_clean}"
+
+            docs.append({
+                "text": text,
+                "metadata": {
+                    "industry_code": code,
+                    "industry_name": name_clean,
+                    "level": detect_level(code),
+                    "source_file": filename
+                }
+            })
 
         return docs
 
@@ -140,15 +150,15 @@ def load_and_chunk_json(file_path: str) -> List[Dict[str, Any]]:
         print(f"❌ Lỗi đọc JSON {filename}: {e}")
         return []
 
-# ===================== INGEST =====================
 
+# ===================== INGEST =====================
 def ingest_documents_to_pinecone(
     json_paths: List[str],
     index_name: str,
     force_reload: bool = False
 ):
     print("=" * 70)
-    print("🚀 INGEST JSON (01–99) → PINECONE")
+    print("🚀 INGEST VSIC JSON → PINECONE")
     print("=" * 70)
     print(f"📁 Folder: {JSON_FOLDER}")
     print(f"📚 File JSON: {len(json_paths)}")
@@ -159,7 +169,7 @@ def ingest_documents_to_pinecone(
     all_docs: List[Dict[str, Any]] = []
     file_stats: Dict[str, int] = {}
 
-    print("📖 Load & chunk JSON...\n")
+    print("📖 Load JSON...\n")
 
     for path in json_paths:
         filename = os.path.basename(path)
@@ -172,12 +182,12 @@ def ingest_documents_to_pinecone(
 
         all_docs.extend(docs)
         file_stats[filename] = len(docs)
-        print(f"✓ {len(docs)} chunks")
+        print(f"✓ {len(docs)} entries")
 
     if not all_docs:
         raise RuntimeError("❌ Không có document để ingest")
 
-    print(f"\n📦 Tổng chunks: {len(all_docs)}")
+    print(f"\n📦 Tổng vectors: {len(all_docs)}")
     print("💾 Nạp Pinecone...\n")
 
     vectordb = None
@@ -206,25 +216,25 @@ def ingest_documents_to_pinecone(
             )
 
         print("✓")
-        time.sleep(1)
+        time.sleep(0.5)
 
     stats = index.describe_index_stats()
 
     print("\n" + "=" * 70)
     print("📊 KẾT QUẢ")
     print("=" * 70)
-    print(f"✅ Tổng vectors: {stats['total_vector_count']}")
+    print(f"✅ Tổng vectors trong index: {stats['total_vector_count']}")
     print(f"📁 File xử lý: {len(file_stats)}")
     for f, c in file_stats.items():
-        print(f"   • {f}: {c} chunks")
+        print(f"   • {f}: {c} vectors")
     print("=" * 70)
 
-# ===================== MAIN =====================
 
+# ===================== MAIN =====================
 if __name__ == "__main__":
     import argparse
 
-    parser = argparse.ArgumentParser("Ingest JSON Quyết định 36 (01–99) → Pinecone")
+    parser = argparse.ArgumentParser("Ingest VSIC JSON → Pinecone")
     parser.add_argument("--force-reload", action="store_true")
     parser.add_argument("--folder", type=str, default=JSON_FOLDER)
 

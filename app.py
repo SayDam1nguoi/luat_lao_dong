@@ -24,6 +24,8 @@ from law_db_query.handler import handle_law_article_query
 from law_db_query.router import route_message
 from mst.router import is_mst_query
 from mst.handler import handle_mst_query
+# ===================== COMPARE 2018 =====================
+from msn_2018.retriever import load_vsic_2018_retriever
 
 # ===================== ENV =====================
 OPENAI__API_KEY = os.getenv("OPENAI__API_KEY")
@@ -67,11 +69,13 @@ pc = PineconeClient(api_key=PINECONE_API_KEY)
 
 vectordb = None
 retriever = None
+retriever_vsic_2018 = None
 
 
 def load_vectordb():
-    global vectordb, retriever
+    global vectordb, retriever, retriever_vsic_2018
 
+    # ===== VSIC 2025 (hiện hành) =====
     if PINECONE_INDEX_NAME not in pc.list_indexes().names():
         print(f" Pinecone index '{PINECONE_INDEX_NAME}' không tồn tại")
         return None
@@ -85,6 +89,15 @@ def load_vectordb():
 
     vectordb = Pinecone(index=index, embedding=emb, text_key="text")
     retriever = vectordb.as_retriever(search_kwargs={"k": 15})
+
+    # ===== VSIC 2018 (đối chứng) =====
+    try:
+        retriever_vsic_2018 = load_vsic_2018_retriever(emb)
+        print(" VSIC 2018 retriever sẵn sàng")
+    except Exception as e:
+        retriever_vsic_2018 = None
+        print(f" Không load được VSIC 2018: {e}")
+
     return vectordb
 
 
@@ -114,10 +127,11 @@ if EXCEL_FILE_PATH and Path(EXCEL_FILE_PATH).exists():
 # ===================== PIPELINE WRAPPER =====================
 pdf_chain = RunnableLambda(
     lambda i: route_message(
-        i,   # ⚠️ truyền CẢ dict, KHÔNG phải i["message"]
+        i,
         llm=llm,
         lang_llm=lang_llm,
-        retriever=retriever,
+        retriever=retriever,                 
+        retriever_vsic_2018=retriever_vsic_2018,
         excel_handler=excel_handler
     )
 )

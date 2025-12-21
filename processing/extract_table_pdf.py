@@ -2,10 +2,10 @@ import pdfplumber
 import json
 
 # ====== ĐƯỜNG DẪN FILE PDF ======
-pdf_path = r"C:\Users\tabao\Downloads\Quyết định-36-2025-QĐ-TTg.pdf"
+pdf_path = r"C:\Users\tabao\Downloads\27_2018_QD-TTg_387358.pdf"
 
 # ====== FILE OUTPUT JSON ======
-output_json = r"ma_nganh.json"
+output_json = r"ma_nganh_27.json"
 
 # Kết quả cuối cùng
 result = {}

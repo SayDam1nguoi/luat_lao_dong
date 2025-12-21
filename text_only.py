@@ -5,8 +5,8 @@ import os
 
 # ===================== CONFIG =====================
 
-PDF_PATH = r"C:\Users\tabao\OneDrive\Desktop\Quyết định-36-2025-QĐ-TTg.pdf"
-OUTPUT_JSON = "quyet_dinh_36_by_sections_01_99.json"
+PDF_PATH = r"C:\Users\tabao\Downloads\27_2018_QD-TTg_387358.pdf"
+OUTPUT_JSON = "quyet_dinh_27_by_sections.json"
 
 # ===================== TABLE HEURISTIC =====================
 
