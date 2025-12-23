@@ -26,7 +26,6 @@ from mst.router import is_mst_query
 from mst.handler import handle_mst_query
 # ===================== COMPARE 2018 =====================
 from msn_2018.retriever import load_vsic_2018_retriever
-
 # ===================== ENV =====================
 OPENAI__API_KEY = os.getenv("OPENAI__API_KEY")
 OPENAI__EMBEDDING_MODEL = os.getenv("OPENAI__EMBEDDING_MODEL")
@@ -37,8 +36,6 @@ PINECONE_API_KEY = os.getenv("PINECONE_API_KEY")
 PINECONE_INDEX_NAME = os.getenv("PINECONE_INDEX_NAME")
 EXCEL_FILE_PATH = os.getenv("EXCEL_FILE_PATH")
 EMBEDDING_DIM = 3072
-
-
 # ===================== INIT LLM =====================
 llm = ChatOpenAI(
     api_key=OPENAI__API_KEY,
@@ -48,10 +45,9 @@ llm = ChatOpenAI(
 
 lang_llm = ChatOpenAI(
     api_key=LANG_MODEL_API_KEY,
-    model_name="gpt-4o-mini",
+    model_name="gpt-3.5-turbo",
     temperature=0
 )
-
 
 # ===================== INIT EMBEDDING =====================
 emb = OpenAIEmbeddings(
