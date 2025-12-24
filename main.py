@@ -145,10 +145,20 @@ async def predict(data: Question):
         # ===============================
         # 0️⃣ LAW COUNT – SQL FIRST
         # ===============================
-        law_count_response = handle_law_count_query(question)
-        if isinstance(law_count_response, str):
+        payload = handle_law_count_query(question)
+
+        if isinstance(payload, dict) and payload.get("intent") == "law_count":
+            response = await run_in_threadpool(
+                app.chatbot.invoke,
+                {
+                    "message": question,
+                    "law_count": payload["total_laws"]  
+                },
+                config={"configurable": {"session_id": "api_session"}}
+            )
+
             return {
-                "answer": law_count_response,
+                "answer": response,
                 "requires_contact": False
             }
 
