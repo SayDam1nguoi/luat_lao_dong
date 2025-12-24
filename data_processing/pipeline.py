@@ -123,10 +123,10 @@ Hãy trả lời bằng ngôn ngữ: {user_lang}.
             content=f"""
 Câu hỏi: {clean_question}
 
-Theo nghị định 36/2025:
+Theo quyết định 36/2025:
 {context_2025}
 
-Theo nghị định 27/2018 (đối chứng):
+Theo quyết định 27/2018 (đối chứng):
 {context_2018}
 
 Hãy trả lời đầy đủ, có cấu trúc so sánh rõ ràng.
