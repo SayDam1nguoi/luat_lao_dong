@@ -127,37 +127,16 @@ if EXCEL_FILE_PATH and Path(EXCEL_FILE_PATH).exists():
 
 
 # ===================== PIPELINE WRAPPER =====================
-def pdf_dispatch(i: Dict):
-    """
-    Dispatcher duy nhất cho NHÁNH CHATBOT CHÍNH.
-    - Giữ nguyên toàn bộ logic trong route_message
-    - Nếu route_message KHÔNG xử lý → fallback sang process_pdf_question
-    """
-    result = route_message(
+pdf_chain = RunnableLambda(
+    lambda i: route_message(
         i,
         llm=llm,
         lang_llm=lang_llm,
-        retriever=retriever,
+        retriever=retriever,                 
         retriever_vsic_2018=retriever_vsic_2018,
         excel_handler=excel_handler
     )
-
-    # Nếu route_message đã xử lý thì trả luôn
-    if isinstance(result, str) and result.strip():
-        return result
-
-    # Fallback BẮT BUỘC đi qua PDF pipeline
-    return process_pdf_question(
-        i,
-        llm=llm,
-        lang_llm=lang_llm,
-        retriever=retriever,
-        retriever_vsic_2018=retriever_vsic_2018,
-        excel_handler=excel_handler
-    )
-
-
-pdf_chain = RunnableLambda(pdf_dispatch)
+)
 
 store: Dict[str, ChatMessageHistory] = {}
 
