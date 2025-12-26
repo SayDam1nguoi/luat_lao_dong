@@ -90,7 +90,7 @@ def load_vectordb():
         return None
 
     vectordb = Pinecone(index=index, embedding=emb, text_key="text")
-    retriever = vectordb.as_retriever(search_kwargs={"k": 15})
+    retriever = vectordb.as_retriever(search_kwargs={"k": 10})
 
     # ===== VSIC 2018 (đối chứng) =====
     try:
@@ -127,17 +127,51 @@ if EXCEL_FILE_PATH and Path(EXCEL_FILE_PATH).exists():
 
 
 # ===================== PIPELINE WRAPPER =====================
-pdf_chain = RunnableLambda(
-    lambda i: route_message(
+# pdf_chain = RunnableLambda(
+#     lambda i: route_message(
+#         i,
+#         llm=llm,
+#         lang_llm=lang_llm,
+#         retriever=retriever,                 
+#         retriever_vsic_2018=retriever_vsic_2018,
+#         excel_handler=excel_handler
+#     )
+# )
+from data_processing.pipeline import process_pdf_question
+
+def pdf_dispatch(i: Dict):
+    """
+    Dispatcher cho chatbot:
+    - Ưu tiên route_message (MST, law_count, law_article, VSIC, Excel...)
+    - Nếu route_message KHÔNG xử lý → fallback BẮT BUỘC sang process_pdf_question
+    """
+
+    # 1️⃣ Thử route_message trước (giữ nguyên toàn bộ nhánh cũ)
+    result = route_message(
         i,
         llm=llm,
         lang_llm=lang_llm,
-        retriever=retriever,                 
+        retriever=retriever,
         retriever_vsic_2018=retriever_vsic_2018,
         excel_handler=excel_handler
     )
-)
 
+    # Nếu route_message đã trả lời hợp lệ → dùng luôn
+    if isinstance(result, str) and result.strip():
+        return result
+
+    # 2️⃣ Fallback bắt buộc → PDF pipeline
+    return process_pdf_question(
+        i,
+        llm=llm,
+        lang_llm=lang_llm,
+        retriever=retriever,
+        retriever_vsic_2018=retriever_vsic_2018,
+        excel_handler=excel_handler
+    )
+
+
+pdf_chain = RunnableLambda(pdf_dispatch)
 store: Dict[str, ChatMessageHistory] = {}
 
 
