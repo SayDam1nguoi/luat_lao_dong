@@ -3,8 +3,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import os
 import uvicorn
-# import uuid
-# session = f"api_{uuid.uuid4()}"
+import uuid
+session = f"api_{uuid.uuid4()}"
 from typing import Optional, Any
 from datetime import datetime
 from starlette.concurrency import run_in_threadpool 
