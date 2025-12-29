@@ -11,7 +11,10 @@ from starlette.concurrency import run_in_threadpool
 from mst.router import is_mst_query
 from mst.handler import handle_mst_query
 from law_db_query.handler import handle_law_count_query
-
+from excel_visualize import (
+    is_excel_visualize_price_intent,
+    handle_excel_price_visualize
+)
 # ===============================
 # Import Chatbot từ app.py
 # ===============================
@@ -174,16 +177,18 @@ async def predict(data: Question):
                 "answer": mst_answer,
                 "requires_contact": False
             }
-        # ====== CHECK MST INTENT (ƯU TIÊN CAO NHẤT) ======
-        if is_mst_query(question):
-            mst_answer = await run_in_threadpool(
-                handle_mst_query,
+
+        if is_excel_visualize_price_intent(question):
+            excel_result = await run_in_threadpool(
+                handle_excel_price_visualize,
                 message=question,
-                llm=app.llm,
-                embedding=app.emb
+                excel_handler=app.excel_handler
             )
+
+            # Excel visualize trả JSON (KHÔNG phải text)
             return {
-                "answer": mst_answer,
+                "type": "excel_visualize",
+                "payload": excel_result,
                 "requires_contact": False
             }
         #  Gọi chatbot thực tế nếu có (Giả định app.py có chứa đối tượng chatbot)
