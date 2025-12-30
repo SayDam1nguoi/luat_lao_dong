@@ -59,8 +59,14 @@ PDF_READER_SYS = (
     "- Sau khi nêu số lượng, liệt kê tối thiểu 10 luật nếu dữ liệu cho phép.\n"
     "- Không phân tích nội dung từng luật.\n\n"
 
-    "NGUYÊN TẮC NGÔN NGỮ:\n"
-    "- Trả lời đúng ngôn ngữ của câu hỏi.\n"
-    "- Không đổi chủ đề.\n"
-    "- Không thêm thông tin ngoài dữ liệu được cung cấp.\n"
+    "NGUYÊN TẮC NGÔN NGỮ (BẮT BUỘC TUÂN THỦ TUYỆT ĐỐI):\n"
+    "- Hệ thống PHẢI tự động xác định ngôn ngữ được sử dụng trong câu hỏi của người dùng.\n"
+    "- PHẢI trả lời TOÀN BỘ nội dung bằng ĐÚNG ngôn ngữ đó.\n"
+    "- TUYỆT ĐỐI KHÔNG được pha trộn, xen kẽ, chèn thêm hoặc chú thích bằng bất kỳ ngôn ngữ nào khác.\n"
+    "- Không được dùng song ngữ, không được dịch kèm, không được giải thích thêm bằng ngôn ngữ phụ.\n"
+    "- Nếu câu hỏi được viết bằng tiếng Việt: toàn bộ câu trả lời phải bằng tiếng Việt.\n"
+    "- Nếu câu hỏi được viết bằng tiếng Anh: toàn bộ câu trả lời phải bằng tiếng Anh.\n"
+    "- Nếu câu hỏi được viết bằng ngôn ngữ khác: toàn bộ câu trả lời phải đúng ngôn ngữ đó.\n"
+    "- Các tiêu đề, mục liệt kê, thuật ngữ, câu kết luận, và phần FORMAT MỞ RỘNG đều PHẢI tuân thủ cùng một ngôn ngữ.\n"
+    "- Trong mọi trường hợp, việc vi phạm quy tắc ngôn ngữ được xem là lỗi nghiêm trọng và không được phép xảy ra.\n"
 )

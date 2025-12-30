@@ -227,10 +227,10 @@ async def predict(data: Question):
                     # Nếu response chính xác là CONTACT_TRIGGER_RESPONSE
                     if answer and answer.strip() == CONTACT_TRIGGER_RESPONSE.strip():
                         requires_contact = True
-                        print(f"🔔 TRIGGER PHÁT HIỆN: Câu hỏi '{question}' cần thu thập thông tin liên hệ")
+                        print(f" TRIGGER PHÁT HIỆN: Câu hỏi '{question}' cần thu thập thông tin liên hệ")
                         
                 except Exception as invoke_error:
-                    print(f"❌ Lỗi khi gọi chatbot.invoke: {invoke_error}")
+                    print(f" Lỗi khi gọi chatbot.invoke: {invoke_error}")
                     answer = f"Xin lỗi, đã xảy ra lỗi khi xử lý câu hỏi của bạn."
             else:
                 answer = "Lỗi: Chatbot không có phương thức invoke"
@@ -239,7 +239,7 @@ async def predict(data: Question):
             # Nếu chưa có chatbot thật hoặc import thất bại, trả về thông báo
             answer = f"(Chatbot mô phỏng - LỖI BACKEND: Không tìm thấy đối tượng app.chatbot) Bạn hỏi: '{question}'"
 
-        # ✅ Nếu người dùng đã gửi phone ngay từ đầu (tùy chọn - không phổ biến)
+        # Nếu người dùng đã gửi phone ngay từ đầu (tùy chọn - không phổ biến)
         if data.phone and SHEET_AVAILABLE:
             try:
                 # Gọi hàm save_contact_info từ app.py
@@ -249,11 +249,11 @@ async def predict(data: Question):
                     data.phone,
                     data.name or ""
                 )
-                print(f"✅ Đã ghi thông tin liên hệ sớm: {data.phone}")
+                print(f" Đã ghi thông tin liên hệ sớm: {data.phone}")
             except Exception as sheet_error:
-                print(f"⚠️ Lỗi ghi Google Sheet: {sheet_error}")
+                print(f" Lỗi ghi Google Sheet: {sheet_error}")
 
-        # ✅ RESPONSE (GIỐNG LOGIC APP.PY)
+        #  RESPONSE (GIỐNG LOGIC APP.PY)
         return {
             "answer": answer,
             "requires_contact": requires_contact  

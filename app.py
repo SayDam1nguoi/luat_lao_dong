@@ -335,7 +335,7 @@ if __name__ == "__main__":
                 config={"configurable": {"session_id": session}}
             )
 
-            print(f"\n🤖 Bot: {response}\n")
+            print(f"\n Bot: {response}\n")
             print("-" * 80)
 
         except KeyboardInterrupt:
