@@ -26,8 +26,8 @@ from mst.router import is_mst_query
 from mst.handler import handle_mst_query
 # ===================== EXCEL VISUALIZE =====================
 from excel_visualize import (
-    is_excel_visualize_price_intent,
-    handle_excel_price_visualize
+    is_excel_visualize_intent,
+    handle_excel_visualize
 )
 
 # ===================== law count response=====================
@@ -295,15 +295,14 @@ if __name__ == "__main__":
                     print(f"\n Bot:\n{mst_response}\n")
                     print("-" * 80)
                     continue
-            # ================= EXCEL VISUALIZE PRICE INTENT =================
-            if is_excel_visualize_price_intent(message):
-                excel_price_response = handle_excel_price_visualize(
+            # ================= EXCEL VISUALIZE INTENT =================
+            if is_excel_visualize_intent(message):
+                excel_response = handle_excel_visualize(
                     message=message,
                     excel_handler=excel_handler,
-                    #llm=llm
                 )
-                if excel_price_response:
-                    print(f"\n Bot:\n{excel_price_response}\n")
+                if excel_response:
+                    print(f"\n Bot:\n{excel_response}\n")
                     print("-" * 80)
                     continue
             # ====== CHECK LAW COUNT INTENT (SQL → LLM) ======

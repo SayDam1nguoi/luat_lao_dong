@@ -49,7 +49,7 @@ def _parse_price(value) -> Optional[float]:
 
 
 # =========================
-# 3️⃣ Vẽ biểu đồ & trả base64
+# 3️⃣ Vẽ biểu đồ so sánh giá đất theo khu / cụm
 # =========================
 def plot_price_bar_chart_base64(
     df,
@@ -124,6 +124,77 @@ def plot_price_bar_chart_base64(
     # =========================
     # Xuất base64
     # =========================
+    buffer = io.BytesIO()
+    plt.savefig(buffer, format="png", dpi=150)
+    plt.close()
+
+    buffer.seek(0)
+    return base64.b64encode(buffer.read()).decode("utf-8")
+
+# =========================
+# Vẽ biểu đồ so sánh tổng diện tích
+# =========================
+
+def plot_area_bar_chart_base64(
+    df,
+    province: str,
+    industrial_type: str
+) -> str:
+
+    df = df.copy()
+
+    df["Tên rút gọn"] = df["Tên"].apply(
+        lambda x: _clean_name(x, province)
+    )
+
+    # Chuẩn hóa diện tích (giả sử đã là số)
+    df = df.dropna(subset=["Tổng diện tích"])
+    df = df.sort_values(by="Tổng diện tích", ascending=True)
+
+    names = df["Tên rút gọn"].tolist()
+    areas = df["Tổng diện tích"].astype(float).tolist()
+
+    plt.figure(figsize=(20, 7))
+
+    bars = plt.bar(
+        range(len(names)),
+        areas,
+        width=0.6,
+        color="green"   # 👈 màu xanh lá
+    )
+
+    plt.xticks(
+        range(len(names)),
+        names,
+        rotation=90,
+        ha="center"
+    )
+
+    plt.xlabel("Khu / Cụm công nghiệp")
+    plt.ylabel("Diện tích (ha)")
+
+    plt.title(
+        f"So sánh tổng diện tích {industrial_type} – {province}"
+    )
+
+    # Trục Y bắt đầu từ 0
+    max_area = max(areas)
+    plt.ylim(0, max_area * 1.15)
+
+    # Hiển thị diện tích trên đầu cột
+    for bar in bars:
+        height = bar.get_height()
+        plt.text(
+            bar.get_x() + bar.get_width() / 2,
+            height,
+            f"{int(height)}",
+            ha="center",
+            va="bottom",
+            fontsize=9
+        )
+
+    plt.subplots_adjust(bottom=0.35)
+
     buffer = io.BytesIO()
     plt.savefig(buffer, format="png", dpi=150)
     plt.close()
