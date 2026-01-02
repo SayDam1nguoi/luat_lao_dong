@@ -1,14 +1,10 @@
 import matplotlib.pyplot as plt
 import io
 import base64
+import numpy as np
 
 
 def _clean_name(name: str, province: str) -> str:
-    """
-    Bỏ các tiền tố không cần thiết:
-    - khu công nghiệp / cụm công nghiệp
-    - tên tỉnh
-    """
     n = name.lower()
     for kw in [
         "khu công nghiệp",
@@ -40,16 +36,28 @@ def plot_price_bar_chart_base64(
     prices = df["Giá thuê đất"].tolist()
 
     # =========================
-    # 2️⃣ Vẽ biểu đồ (DÀI HƠN)
+    # 2️⃣ Vị trí X – giãn cột
     # =========================
-    plt.figure(figsize=(18, 6))  # 👈 kéo dài chiều ngang
+    x = np.arange(len(names)) * 1.3
 
-    bars = plt.bar(names, prices)
+    plt.figure(figsize=(18, 6))
 
-    # 👇 TÊN TRỤC X THẲNG
-    plt.xticks(rotation=0, ha="center")
+    bars = plt.bar(
+        x,
+        prices,
+        width=0.6
+    )
 
-    plt.xlabel("Khu / Cụm")
+    # 👇 TÊN KHU / CỤM ĐỂ DỌC
+    plt.xticks(
+        x,
+        names,
+        rotation=90,     # 👈 xoay dọc
+        ha="center",
+        fontsize=9
+    )
+
+    plt.xlabel("Khu / Cụm công nghiệp")
     plt.ylabel("USD / m² / năm")
 
     plt.title(
@@ -57,24 +65,28 @@ def plot_price_bar_chart_base64(
     )
 
     # =========================
-    # 3️⃣ Hiển thị giá trên đầu cột
+    # 3️⃣ TRỤC Y BẮT ĐẦU TỪ 0
     # =========================
-    for bar in bars:
-        height = bar.get_height()
+    plt.ylim(bottom=0)
+
+    # =========================
+    # 4️⃣ Hiển thị GIÁ trên đầu cột
+    # =========================
+    for bar, price in zip(bars, prices):
         plt.text(
             bar.get_x() + bar.get_width() / 2,
-            height,
-            f"{int(height)}",
+            bar.get_height() + 1,
+            f"{price} USD/m²",
             ha="center",
             va="bottom",
             fontsize=9
         )
 
-    # 👇 tránh chữ bị đè
-    plt.subplots_adjust(bottom=0.25)
+    
+    plt.tight_layout()
 
     # =========================
-    # 4️⃣ Xuất base64
+    # 5️⃣ Xuất base64
     # =========================
     buffer = io.BytesIO()
     plt.savefig(buffer, format="png", dpi=150)
@@ -82,5 +94,3 @@ def plot_price_bar_chart_base64(
 
     buffer.seek(0)
     return base64.b64encode(buffer.read()).decode("utf-8")
-
-
