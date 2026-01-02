@@ -186,6 +186,7 @@ async def predict(data: Question):
             )
 
             return {
+                "answer": "Đây là biểu đồ do Chatiip tạo cho bạn: ",
                 "type": "excel_visualize",
                 "payload": excel_result,
                 "requires_contact": False
