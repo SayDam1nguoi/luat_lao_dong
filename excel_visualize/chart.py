@@ -125,8 +125,8 @@ def _add_footer(fig):
         footer_text,
         ha="center",
         va="center",
-        fontsize=12,     # 👈 CHỮ TO HƠN
-        color="black"    # 👈 MÀU ĐEN
+        fontsize=15,     
+        color="black"    
     )
 
 # =========================
@@ -155,7 +155,7 @@ def plot_price_bar_chart_base64(df, province: str, industrial_type: str) -> str:
     ax.set_xticks(range(len(names)))
     ax.set_xticklabels(names, rotation=90, ha="center")
 
-    ax.set_xlabel("Khu / Cụm công nghiệp")
+    #ax.set_xlabel("Khu / Cụm công nghiệp")
     ax.set_ylabel("USD / m² / năm")
     ax.set_title(
         f"BIỂU ĐỒ SO SÁNH GIÁ THUÊ ĐẤT KHU CÔNG NGHIỆP TỈNH {province.upper()}",
@@ -228,7 +228,7 @@ def plot_area_bar_chart_base64(df, province: str, industrial_type: str) -> str:
     ax.set_xticks(range(len(names)))
     ax.set_xticklabels(names, rotation=90, ha="center")
 
-    ax.set_xlabel("Khu / Cụm công nghiệp")
+    #ax.set_xlabel("Khu / Cụm công nghiệp")
     ax.set_ylabel("Diện tích (ha)")
     ax.set_title(
         f"BIỂU ĐỒ SO SÁNH TỔNG DIỆN TÍCH KHU CÔNG NGHIỆP TỈNH {province.upper()}",
