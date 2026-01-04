@@ -134,7 +134,12 @@ def plot_price_bar_chart_base64(df, province: str, industrial_type: str) -> str:
 
     ax.set_xlabel("Khu / Cụm công nghiệp")
     ax.set_ylabel("USD / m² / năm")
-    ax.set_title(f"So sánh giá thuê đất {industrial_type} – {province}")
+    ax.set_title(
+        f"BIỂU ĐỒ SO SÁNH GIÁ THUÊ ĐẤT KHU CÔNG NGHIỆP TỈNH {province.upper()}",
+        fontsize=16,          
+        fontweight="bold",    
+        pad=15                
+    )
 
     # Trục Y bắt đầu từ 0
     max_price = max(prices) if prices else 0
@@ -202,7 +207,12 @@ def plot_area_bar_chart_base64(df, province: str, industrial_type: str) -> str:
 
     ax.set_xlabel("Khu / Cụm công nghiệp")
     ax.set_ylabel("Diện tích (ha)")
-    ax.set_title(f"So sánh tổng diện tích {industrial_type} – {province}")
+    ax.set_title(
+        f"BIỂU ĐỒ SO SÁNH TỔNG DIỆN TÍCH KHU CÔNG NGHIỆP TỈNH {province.upper()}",
+        fontsize=16,
+        fontweight="bold",
+        pad=15
+    )
 
     max_area = max(areas) if areas else 0
     ax.set_ylim(0, max_area * 1.15 if max_area > 0 else 1)
