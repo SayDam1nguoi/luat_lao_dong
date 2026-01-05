@@ -6,6 +6,8 @@ import os
 from PIL import Image
 from datetime import datetime
 import pytz
+
+
 # =========================
 # 1️⃣ Làm sạch tên khu / cụm
 # =========================
@@ -21,56 +23,23 @@ def _clean_name(name: str, province: str) -> str:
 
 
 # =========================
-# 2️⃣ Parse giá về số
-# =========================
-def _parse_price(value) -> Optional[float]:
-    """
-    - '120 USD/m²/năm' -> 120
-    - '85-95 USD/m²/năm' -> 90
-    """
-    if value is None:
-        return None
-
-    s = str(value).lower()
-    for kw in ["usd/m²/năm", "usd/m2/năm", "usd"]:
-        s = s.replace(kw, "")
-    s = s.strip()
-
-    # Trường hợp khoảng giá
-    if "-" in s:
-        try:
-            a, b = s.split("-")
-            return (float(a.strip()) + float(b.strip())) / 2
-        except Exception:
-            return None
-
-    try:
-        return float(s)
-    except Exception:
-        return None
-
-
-# =========================
-# 3️⃣ Dán logo vào ảnh PNG (ăn chắc)
+# 2️⃣ Dán logo vào ảnh PNG (ăn chắc)
 # =========================
 def _overlay_logo_on_png_bytes(
     png_bytes: bytes,
     alpha: float = 0.9,
-    scale: float = 0.12,
+    scale: float = 0.08,
     padding: int = 20
 ) -> bytes:
     """
     Dán logo vào góc phải trên của ảnh PNG đã render từ matplotlib.
 
     - alpha: độ trong suốt logo (0-1)
-    - scale: logo chiếm bao nhiêu % chiều rộng ảnh (vd 0.12 = 12%)
+    - scale: logo chiếm bao nhiêu % chiều rộng ảnh (vd 0.08 = 8%)
     - padding: khoảng cách tới mép (px)
     """
+    # ✅ Đồng bộ tên file logo
     logo_path = os.path.join(os.path.dirname(__file__), "assets", "company_logos.png")
-
-    # Debug nhanh nếu cần:
-    # print("[LOGO PATH]", logo_path)
-    # print("[LOGO EXISTS]", os.path.exists(logo_path))
 
     if not os.path.exists(logo_path):
         return png_bytes
@@ -105,8 +74,9 @@ def _overlay_logo_on_png_bytes(
     base_img.convert("RGB").save(out, format="PNG")
     return out.getvalue()
 
+
 # =========================
-#  Đo thời gian hiện tại
+# 3️⃣ Footer (giờ Việt Nam)
 # =========================
 def _add_footer(fig):
     tz_vn = pytz.timezone("Asia/Ho_Chi_Minh")
@@ -120,17 +90,18 @@ def _add_footer(fig):
     )
 
     fig.text(
-        0.5,            # căn giữa
-        0.025,          
+        0.5,          # căn giữa
+        0.03,         # sát đáy
         footer_text,
         ha="center",
         va="center",
-        fontsize=15,     
-        color="black"    
+        fontsize=15,  # ✅ chữ to hơn
+        color="black" # ✅ màu đen
     )
 
+
 # =========================
-# 5 Vẽ biểu đồ so sánh giá thuê đất (base64)
+# 4️⃣ Vẽ biểu đồ so sánh giá thuê đất (base64)
 # =========================
 def plot_price_bar_chart_base64(df, province: str, industrial_type: str) -> str:
     df = df.copy()
@@ -138,9 +109,9 @@ def plot_price_bar_chart_base64(df, province: str, industrial_type: str) -> str:
     # Chuẩn hóa tên
     df["Tên rút gọn"] = df["Tên"].apply(lambda x: _clean_name(x, province))
 
-    # Chuẩn hóa giá
-    df["Giá số"] = df["Giá thuê đất"].apply(_parse_price)
+    # ✅ Đồng bộ: data_adapter đã tạo sẵn "Giá số"
     df = df.dropna(subset=["Giá số"])
+    df["Giá số"] = df["Giá số"].astype(float)
 
     # Sort tăng dần
     df = df.sort_values(by="Giá số", ascending=True)
@@ -155,13 +126,12 @@ def plot_price_bar_chart_base64(df, province: str, industrial_type: str) -> str:
     ax.set_xticks(range(len(names)))
     ax.set_xticklabels(names, rotation=90, ha="center")
 
-    #ax.set_xlabel("Khu / Cụm công nghiệp")
     ax.set_ylabel("USD / m² / năm")
     ax.set_title(
-        f"BIỂU ĐỒ SO SÁNH GIÁ THUÊ ĐẤT KHU CÔNG NGHIỆP TỈNH {province.upper()}",
-        fontsize=16,          
-        fontweight="bold",    
-        pad=15                
+        f"BIỂU ĐỒ SO SÁNH GIÁ THUÊ ĐẤT {industrial_type.upper()} TỈNH {province.upper()}",
+        fontsize=16,
+        fontweight="bold",
+        pad=15
     )
 
     # Trục Y bắt đầu từ 0
@@ -180,8 +150,11 @@ def plot_price_bar_chart_base64(df, province: str, industrial_type: str) -> str:
             fontsize=9
         )
 
-    # Tránh đè chữ
-    fig.subplots_adjust(bottom=0.35)
+    # ✅ Chừa chỗ cho label + footer
+    fig.subplots_adjust(bottom=0.45)
+
+    # ✅ Footer (giờ VN)
+    _add_footer(fig)
 
     # Render ra PNG bytes
     buffer = io.BytesIO()
@@ -190,7 +163,7 @@ def plot_price_bar_chart_base64(df, province: str, industrial_type: str) -> str:
 
     png_bytes = buffer.getvalue()
 
-    # Dán logo lên PNG (ăn chắc)
+    # ✅ Dán logo lên PNG
     png_bytes = _overlay_logo_on_png_bytes(
         png_bytes,
         alpha=0.9,
@@ -209,12 +182,14 @@ def plot_area_bar_chart_base64(df, province: str, industrial_type: str) -> str:
 
     df["Tên rút gọn"] = df["Tên"].apply(lambda x: _clean_name(x, province))
 
-    # Chuẩn hóa diện tích
+    # Chuẩn hóa diện tích (data_adapter đã parse float)
     df = df.dropna(subset=["Tổng diện tích"])
+    df["Tổng diện tích"] = df["Tổng diện tích"].astype(float)
+
     df = df.sort_values(by="Tổng diện tích", ascending=True)
 
     names = df["Tên rút gọn"].tolist()
-    areas = df["Tổng diện tích"].astype(float).tolist()
+    areas = df["Tổng diện tích"].tolist()
 
     fig, ax = plt.subplots(figsize=(20, 7))
 
@@ -228,10 +203,9 @@ def plot_area_bar_chart_base64(df, province: str, industrial_type: str) -> str:
     ax.set_xticks(range(len(names)))
     ax.set_xticklabels(names, rotation=90, ha="center")
 
-    #ax.set_xlabel("Khu / Cụm công nghiệp")
     ax.set_ylabel("Diện tích (ha)")
     ax.set_title(
-        f"BIỂU ĐỒ SO SÁNH TỔNG DIỆN TÍCH KHU CÔNG NGHIỆP TỈNH {province.upper()}",
+        f"BIỂU ĐỒ SO SÁNH TỔNG DIỆN TÍCH {industrial_type.upper()} TỈNH {province.upper()}",
         fontsize=16,
         fontweight="bold",
         pad=15
@@ -251,9 +225,10 @@ def plot_area_bar_chart_base64(df, province: str, industrial_type: str) -> str:
             fontsize=9
         )
 
+    # ✅ chừa chỗ cho footer
     fig.subplots_adjust(bottom=0.45)
 
-    # Thêm footer
+    # ✅ footer
     _add_footer(fig)
 
     buffer = io.BytesIO()
@@ -262,7 +237,7 @@ def plot_area_bar_chart_base64(df, province: str, industrial_type: str) -> str:
 
     png_bytes = buffer.getvalue()
 
-    # Dán logo lên PNG (ăn chắc)
+    # ✅ logo
     png_bytes = _overlay_logo_on_png_bytes(
         png_bytes,
         alpha=0.9,
