@@ -17,7 +17,7 @@ def is_greeting_question(question: str) -> bool:
     greetings = [
         # VI
         "xin chào", "chào", "chào bạn", "chào anh", "chào chị",
-        "bạn là ai", "bạn làm được gì", "giúp tôi", "giúp mình",
+        "bạn là ai", "bạn làm được gì", "giúp tôi", "giúp mình","bạn biết làm những gì", "chatiip là"
         # EN
         "hello", "hi", "hey", "good morning", "good afternoon", "good evening",
         "who are you", "what can you do", "help me"
