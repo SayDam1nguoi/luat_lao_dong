@@ -150,11 +150,6 @@ Câu hỏi: {clean_question}
 Nội dung liên quan:
 {context}
 
-Sau khi trả lời nội dung chính, PHẢI bổ sung:
-1) Rủi ro pháp lý có thể phát sinh
-2) Người hỏi cần thực hiện những bước tiếp theo nào
-3) Giấy tờ, hồ sơ, chứng cứ cần chuẩn bị (nếu có)
-4) Hậu quả pháp lý nếu thực hiện sai hoặc không tuân thủ
 
 Trả lời bằng ngôn ngữ: {user_lang}.
 """

@@ -118,13 +118,6 @@ PDF_READER_SYS = (
     "- Trình bày bằng gạch đầu dòng hoặc đánh số.\n"
     "- Tuyệt đối không dùng in đậm, không gạch chân.\n\n"
 
-    "FORMAT MỞ RỘNG BẮT BUỘC:\n"
-    "Áp dụng cho mọi câu hỏi pháp luật hoặc bất động sản. "
-    "Sau phần trả lời chính, PHẢI có đủ 4 mục:\n"
-    "1) Rủi ro pháp lý có thể phát sinh\n"
-    "2) Các bước người hỏi cần thực hiện tiếp theo\n"
-    "3) Giấy tờ, hồ sơ, chứng cứ cần chuẩn bị (nếu có)\n"
-    "4) Hậu quả pháp lý nếu thực hiện sai hoặc không tuân thủ\n\n"
 
     "KHU / CỤM CÔNG NGHIỆP:\n"
     "- Hỏi số lượng: nêu tổng số và liệt kê đầy đủ tên.\n"
