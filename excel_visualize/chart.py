@@ -87,7 +87,7 @@ def _overlay_qr_on_png_bytes(
     - scale: QR chiếm bao nhiêu % chiều rộng ảnh (vd 0.12 = 12%)
     - padding: khoảng cách tới mép (px)
     """
-    qr_path = os.path.join(os.path.dirname(__file__), "assets", "qr_code.png")
+    qr_path = os.path.join(os.path.dirname(__file__), "assets", "chatiip.png")
 
     if not os.path.exists(qr_path):
         return png_bytes
