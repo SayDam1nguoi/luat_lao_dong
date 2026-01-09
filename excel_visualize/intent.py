@@ -1,6 +1,6 @@
 # intent.py
 import re
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 
 # =========================
 # 1️⃣ Visualize intent (MAIN)
@@ -85,10 +85,60 @@ def detect_industrial_type(message: str) -> str | None:
     return None
 
 
+# =========================
+# ✅ NEW: Tách tỉnh/thành phố từ câu hỏi (tối đa 2)
+# =========================
+def extract_provinces_from_excel(message: str, excel_handler, max_provinces: int = 2) -> List[str]:
+    """
+    Trả về danh sách tỉnh/thành phố xuất hiện trong câu hỏi, ưu tiên tên dài.
+    Mặc định lấy tối đa 2 tỉnh để phục vụ so sánh.
+    """
+    msg = message.lower()
+    provinces = (
+        excel_handler.df["Tỉnh/Thành phố"]
+        .dropna()
+        .astype(str)
+        .unique()
+    )
+
+    found: List[str] = []
+    for p in sorted(provinces, key=len, reverse=True):
+        if p.lower() in msg:
+            found.append(p)
+
+    # loại trùng nhưng giữ thứ tự
+    found = list(dict.fromkeys(found))
+    return found[:max_provinces]
+
+
+# =========================
+# ✅ NEW: So sánh giữa 2 tỉnh (an toàn hơn)
+# =========================
+def is_cross_province_compare(message: str, excel_handler=None) -> bool:
+    """
+    Nhận diện user muốn so sánh GIỮA 2 TỈNH.
+
+    Quy tắc an toàn:
+    - Nếu truyền excel_handler: chỉ trả True khi bắt được >=2 tỉnh.
+    - Nếu không truyền excel_handler: dựa vào keyword mạnh ('giữa', 'so với', 'vs').
+    """
+    msg = message.lower()
+
+    strong_keywords = ["giữa", "so với", "vs", "versus"]
+    if any(k in msg for k in strong_keywords):
+        return True
+
+    # Nếu có excel_handler thì kiểm tra số tỉnh bắt được
+    if excel_handler is not None:
+        provinces = extract_provinces_from_excel(message, excel_handler, max_provinces=3)
+        return len(provinces) >= 2
+
+    return False
+
+
 # ============================================================
 # 4️⃣ Parse điều kiện lọc (từ...đến..., trong khoảng...đến..., lớn hơn, nhỏ hơn...)
 # ============================================================
-
 def _to_number(raw: str) -> Optional[float]:
     """
     Chuyển chuỗi số có thể kèm đơn vị thành float.
@@ -127,11 +177,6 @@ def parse_excel_numeric_filter(message: str) -> Optional[Dict[str, Any]]:
     msg = message.lower()
 
     # 1) BETWEEN:
-    # - "từ A đến B"
-    # - "trong khoảng A đến B"
-    # - "khoảng A đến B"
-    # - "A đến B"
-    # - "A - B"
     m = re.search(
         r"(?:từ|trong\s*khoảng|khoảng)?\s*"
         r"([0-9\.,]+(?:\s*\w+)?)\s*"
@@ -169,7 +214,7 @@ def parse_excel_numeric_filter(message: str) -> Optional[Dict[str, Any]]:
         if op == "<":
             return {"type": "lt", "value": val}
 
-    # 4) Dạng tiếng Việt: lớn hơn / trên / nhiều hơn / cao hơn (và biến thể "từ ... trở lên")
+    # 4) Dạng tiếng Việt: lớn hơn / trên / nhiều hơn / cao hơn
     m = re.search(r"(lớn hơn|trên|nhiều hơn|cao hơn)\s*([0-9\.,]+(?:\s*\w+)?)", msg)
     if m:
         val = _to_number(m.group(2))
@@ -182,7 +227,7 @@ def parse_excel_numeric_filter(message: str) -> Optional[Dict[str, Any]]:
         if val is not None:
             return {"type": "gte", "value": val}
 
-    # 5) Dạng tiếng Việt: nhỏ hơn / dưới / ít hơn / thấp hơn (và biến thể "đến ... trở xuống")
+    # 5) Dạng tiếng Việt: nhỏ hơn / dưới / ít hơn / thấp hơn
     m = re.search(r"(nhỏ hơn|dưới|ít hơn|thấp hơn)\s*([0-9\.,]+(?:\s*\w+)?)", msg)
     if m:
         val = _to_number(m.group(2))

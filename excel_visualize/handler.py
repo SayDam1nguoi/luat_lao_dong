@@ -4,7 +4,8 @@ from .data_adapter import (
 )
 from .chart import (
     plot_price_bar_chart_base64,
-    plot_area_bar_chart_base64
+    plot_area_bar_chart_base64,
+    plot_price_bar_chart_two_provinces_base64
 )
 from .intent import (
     detect_industrial_type,
@@ -12,7 +13,7 @@ from .intent import (
     parse_excel_numeric_filter
 )
 
-from typing import Dict, Any
+from typing import Dict, Any, List
 
 
 def extract_province_from_excel(message: str, excel_handler) -> str | None:
@@ -31,6 +32,38 @@ def extract_province_from_excel(message: str, excel_handler) -> str | None:
             return province
 
     return None
+
+
+# =========================
+# ✅ NEW: Extract 2 provinces (nếu có)
+# =========================
+def extract_provinces_from_excel(message: str, excel_handler, max_provinces: int = 2) -> List[str]:
+    msg = message.lower()
+
+    provinces = (
+        excel_handler.df["Tỉnh/Thành phố"]
+        .dropna()
+        .astype(str)
+        .unique()
+    )
+
+    found: List[str] = []
+    for province in sorted(provinces, key=len, reverse=True):
+        if province.lower() in msg:
+            found.append(province)
+
+    # loại trùng nhưng giữ thứ tự
+    unique_found = list(dict.fromkeys(found))
+    return unique_found[:max_provinces]
+
+
+# =========================
+# ✅ NEW: Nhận diện so sánh giữa 2 tỉnh
+# =========================
+def _is_cross_province_compare(message: str) -> bool:
+    msg = message.lower()
+    keywords = ["giữa", "so với", "vs", "và", "hai tỉnh", "2 tỉnh"]
+    return any(k in msg for k in keywords)
 
 
 # =========================
@@ -110,10 +143,12 @@ def handle_excel_visualize(message: str, excel_handler):
         }
 
     # =========================
-    # 1️⃣ Province
+    # 1️⃣ Provinces (ưu tiên bắt 2 tỉnh nếu có)
     # =========================
-    province = extract_province_from_excel(message, excel_handler)
-    if not province:
+    provinces = extract_provinces_from_excel(message, excel_handler, max_provinces=2)
+
+    # Nếu không bắt được tỉnh nào → lỗi như cũ
+    if not provinces:
         return {
             "type": "error",
             "message": "Vui lòng nêu rõ tỉnh/thành phố."
@@ -148,8 +183,80 @@ def handle_excel_visualize(message: str, excel_handler):
     # ✅ Parse điều kiện lọc (nếu người dùng có nói)
     filter_rule = parse_excel_numeric_filter(message)
 
+    # =========================================================
+    # ✅ NEW: 2 TỈNH + PRICE → VẼ 2 BIỂU ĐỒ (TRÊN/DƯỚI)
+    # =========================================================
+    if metric == "price" and len(provinces) >= 2 and _is_cross_province_compare(message):
+        p1, p2 = provinces[0], provinces[1]
+
+        df1 = extract_price_data(
+            excel_handler=excel_handler,
+            province=p1,
+            industrial_type=industrial_type
+        )
+        df2 = extract_price_data(
+            excel_handler=excel_handler,
+            province=p2,
+            industrial_type=industrial_type
+        )
+
+        if df1.empty:
+            return {
+                "type": "error",
+                "message": f"Không có dữ liệu {industrial_type.lower()} tại {p1}."
+            }
+        if df2.empty:
+            return {
+                "type": "error",
+                "message": f"Không có dữ liệu {industrial_type.lower()} tại {p2}."
+            }
+
+        df1_filtered = _apply_numeric_filter(df1, metric="price", rule=filter_rule)
+        df2_filtered = _apply_numeric_filter(df2, metric="price", rule=filter_rule)
+
+        if df1_filtered.empty or df2_filtered.empty:
+            cond_text = _format_filter_rule(filter_rule, unit="USD/m²/năm")
+            return {
+                "type": "error",
+                "message": (
+                    f"Một trong hai tỉnh không có dữ liệu thỏa điều kiện {cond_text}."
+                    if cond_text else
+                    "Một trong hai tỉnh không có dữ liệu thỏa điều kiện yêu cầu."
+                )
+            }
+
+        chart_base64 = plot_price_bar_chart_two_provinces_base64(
+            df1_filtered, p1,
+            df2_filtered, p2,
+            industrial_type
+        )
+
+        # ✅ NEW TYPE (riêng cho 2 tỉnh)
+        return {
+            "type": "excel_visualize_price_compare_province",
+            "provinces": [p1, p2],
+            "industrial_type": industrial_type,
+            "metric": "price",
+            "items": {
+                p1: [
+                    {"name": row["Tên"], "price": row["Giá thuê đất"]}
+                    for _, row in df1_filtered.iterrows()
+                ],
+                p2: [
+                    {"name": row["Tên"], "price": row["Giá thuê đất"]}
+                    for _, row in df2_filtered.iterrows()
+                ],
+            },
+            "chart_base64": chart_base64
+        }
+
     # =========================
-    # 4️⃣ PRICE CHART
+    # 4️⃣ Province (fallback về 1 tỉnh như cũ)
+    # =========================
+    province = provinces[0]
+
+    # =========================
+    # 4️⃣ PRICE CHART (1 tỉnh)
     # =========================
     if metric == "price":
         df = extract_price_data(
@@ -204,7 +311,7 @@ def handle_excel_visualize(message: str, excel_handler):
         }
 
     # =========================
-    # 5️⃣ AREA CHART
+    # 5️⃣ AREA CHART (1 tỉnh)
     # =========================
     if metric == "area":
         df = extract_area_data(

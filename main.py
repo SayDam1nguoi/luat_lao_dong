@@ -135,19 +135,7 @@ async def home():
 # ---------------------------------------
 @app_fastapi.post("/chat", summary="Dự đoán/Trả lời câu hỏi từ Chatbot")
 async def predict(data: Question):
-    """
-    Nhận câu hỏi và trả về câu trả lời từ mô hình chatbot.
-    
-    Logic hoạt động (GIỐNG FILE APP.PY):
-    1. Gọi chatbot để trả lời câu hỏi
-    2. Kiểm tra xem response có phải là CONTACT_TRIGGER_RESPONSE không
-    3. Nếu là trigger response:
-       - Trả về response với flag requires_contact = true
-       - Client sẽ hiển thị form nhập phone/name
-       - Client gọi POST /submit-contact để lưu thông tin
-    4. Nếu user đã gửi phone ngay từ đầu (optional):
-       - Lưu luôn vào Google Sheet
-    """
+
     question = data.question.strip()
 
     if not question:
@@ -188,7 +176,7 @@ async def predict(data: Question):
                 "answer": mst_answer,
                 "requires_contact": False
             }
-
+        # visualize 
         if is_excel_visualize_intent(question):
             excel_result = await run_in_threadpool(
                 handle_excel_visualize,
@@ -344,24 +332,7 @@ async def predict(data: Question):
 # ---------------------------------------
 @app_fastapi.post("/submit-contact", summary="Gửi thông tin liên hệ sau khi chatbot yêu cầu")
 async def submit_contact(data: ContactInfo):
-    """
-    Route để client gửi thông tin liên hệ sau khi nhận được requires_contact=true.
-    
-    LOGIC (GIỐNG APP.PY - BƯỚC 2):
-    1. Nhận original_question, phone, name từ client
-    2. Validate số điện thoại
-    3. Lưu vào Google Sheet
-    4. Trả về confirmation
-    
-    Flow hoàn chỉnh:
-    User: "Tôi muốn tư vấn về đầu tư"
-    → POST /chat → Bot trả về trigger response + requires_contact=true
-    → Client hiển thị form nhập phone/name
-    → User nhập phone + name
-    → Client POST /submit-contact với {original_question, phone, name}
-    → Server lưu vào Google Sheet
-    → Trả về success message
-    """
+
     
     if not SHEET_AVAILABLE:
         raise HTTPException(
