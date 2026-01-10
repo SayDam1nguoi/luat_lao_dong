@@ -25,7 +25,7 @@ def _clean_name(name: str, province: str) -> str:
 # ✅ NEW: vẽ số + tên bằng ax.text (đảm bảo thẳng hàng)
 # =========================
 def _draw_index_and_names(ax, names, number_y=-0.04, name_y=-0.16, name_rotation=90,
-                          fontsize_num=10, fontsize_name=9):
+                          fontsize_num=10, fontsize_name=12):
     """
     Vẽ:
       - số thứ tự bọc tròn (ở number_y)
@@ -191,7 +191,7 @@ def plot_price_bar_chart_base64(df, province: str, industrial_type: str) -> str:
 
     # ✅ thay set_xticklabels + circled_index bằng 1 hàm vẽ chuẩn
     _draw_index_and_names(ax, names, number_y=-0.04, name_y=-0.16, name_rotation=90,
-                          fontsize_num=10, fontsize_name=9)
+                          fontsize_num=10, fontsize_name=12)
 
     ax.set_ylabel("USD / m² / chu kì thuê", fontsize=14)
     ax.set_title(
@@ -252,7 +252,7 @@ def plot_area_bar_chart_base64(df, province: str, industrial_type: str) -> str:
 
     # ✅ vẽ số + tên chuẩn, không lệch
     _draw_index_and_names(ax, names, number_y=-0.04, name_y=-0.16, name_rotation=90,
-                          fontsize_num=10, fontsize_name=9)
+                          fontsize_num=10, fontsize_name=12)
 
     ax.set_ylabel("Diện tích (ha)", fontsize=14)
     ax.set_title(
@@ -323,14 +323,14 @@ def plot_price_bar_chart_two_provinces_base64(
 
     bars1 = ax1.bar(range(len(names1)), prices1, width=0.6)
     _draw_index_and_names(ax1, names1, number_y=-0.04, name_y=-0.16, name_rotation=90,
-                          fontsize_num=10, fontsize_name=9)
+                          fontsize_num=10, fontsize_name=12)
     ax1.set_ylabel("USD / m² / chu kì thuê", fontsize=13)
     ax1.set_title(f"{industrial_type.upper()} - {province1.upper()}",
                   fontsize=16, fontweight="bold", pad=10)
 
     bars2 = ax2.bar(range(len(names2)), prices2, width=0.6)
     _draw_index_and_names(ax2, names2, number_y=-0.04, name_y=-0.16, name_rotation=90,
-                          fontsize_num=10, fontsize_name=9)
+                          fontsize_num=10, fontsize_name=12)
     ax2.set_ylabel("USD / m² / chu kì thuê", fontsize=13)
     ax2.set_title(f"{industrial_type.upper()} - {province2.upper()}",
                   fontsize=16, fontweight="bold", pad=10)
@@ -401,14 +401,14 @@ def plot_area_bar_chart_two_provinces_base64(
 
     bars1 = ax1.bar(range(len(names1)), areas1, width=0.6, color="green")
     _draw_index_and_names(ax1, names1, number_y=-0.04, name_y=-0.16, name_rotation=90,
-                          fontsize_num=10, fontsize_name=9)
+                          fontsize_num=10, fontsize_name=12)
     ax1.set_ylabel("Diện tích (ha)", fontsize=13)
     ax1.set_title(f"{industrial_type.upper()} - {province1.upper()}",
                   fontsize=16, fontweight="bold", pad=10)
 
     bars2 = ax2.bar(range(len(names2)), areas2, width=0.6, color="green")
     _draw_index_and_names(ax2, names2, number_y=-0.04, name_y=-0.16, name_rotation=90,
-                          fontsize_num=10, fontsize_name=9)
+                          fontsize_num=10, fontsize_name=12)
     ax2.set_ylabel("Diện tích (ha)", fontsize=13)
     ax2.set_title(f"{industrial_type.upper()} - {province2.upper()}",
                   fontsize=16, fontweight="bold", pad=10)
