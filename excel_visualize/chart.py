@@ -22,13 +22,27 @@ def _clean_name(name: str, province: str) -> str:
 
 
 # =========================
-# ✅ NEW: Vẽ số thứ tự bọc tròn dưới trục X
+# ✅ NEW: Tick label = (khoảng trống) + tên
+# để chừa chỗ cho số thứ tự ở phía "trên" tên
 # =========================
-def _add_circled_index_under_ticks(ax, n_items: int, y_offset: float = -0.16, fontsize: int = 10):
+def _set_xticklabels_with_space(ax, names, rotation=90):
     """
-    Vẽ số thứ tự (1..n) bọc bởi hình tròn, nằm dưới tick label ở trục X.
+    Đặt tick label là tên nhưng thêm 1 dòng trống phía trên,
+    để số thứ tự (vẽ bằng ax.text) nằm "trước" tên (theo trục X).
+    """
+    ax.set_xticks(range(len(names)))
+    ax.set_xticklabels([f"\n{n}" for n in names], rotation=rotation, ha="center")
 
-    - y_offset: vị trí theo hệ trục X (0 = tại trục, âm = xuống dưới)
+
+# =========================
+# ✅ NEW: Vẽ số thứ tự bọc tròn (nằm gần trục X, phía trên tên)
+# =========================
+def _add_circled_index_above_names(ax, n_items: int, y_offset: float = -0.06, fontsize: int = 10):
+    """
+    Vẽ số thứ tự (1..n) bọc tròn, nằm gần trục X và "trước" tên.
+    - y_offset: hệ trục x-axis transform (0 = tại trục X, âm = xuống dưới).
+      Để số nằm ngay dưới trục X và nằm trên phần tên (đã chừa 1 dòng trống),
+      thường dùng -0.05 ~ -0.08.
     """
     for i in range(n_items):
         ax.text(
@@ -58,11 +72,7 @@ def _overlay_logo_on_png_bytes(
     scale: float = 0.08,
     padding: int = 20
 ) -> bytes:
-    """
-    Dán logo vào góc phải trên của ảnh PNG đã render từ matplotlib.
-    """
     logo_path = os.path.join(os.path.dirname(__file__), "assets", "company_logos.png")
-
     if not os.path.exists(logo_path):
         return png_bytes
 
@@ -84,7 +94,6 @@ def _overlay_logo_on_png_bytes(
 
     x = base_img.size[0] - new_w - padding
     y = padding
-
     base_img.paste(logo, (x, y), logo)
 
     out = io.BytesIO()
@@ -98,11 +107,7 @@ def _overlay_qr_on_png_bytes(
     scale: float = 0.12,
     padding: int = 20
 ) -> bytes:
-    """
-    Dán QR code vào góc phải dưới của ảnh PNG.
-    """
     qr_path = os.path.join(os.path.dirname(__file__), "assets", "chatiip.png")
-
     if not os.path.exists(qr_path):
         return png_bytes
 
@@ -124,7 +129,6 @@ def _overlay_qr_on_png_bytes(
 
     x = base_img.size[0] - new_w - padding
     y = base_img.size[1] - new_h - padding
-
     base_img.paste(qr, (x, y), qr)
 
     out = io.BytesIO()
@@ -176,10 +180,11 @@ def plot_price_bar_chart_base64(df, province: str, industrial_type: str) -> str:
     fig, ax = plt.subplots(figsize=(20, 7))
     bars = ax.bar(range(len(names)), prices, width=0.6)
 
-    ax.set_xticks(range(len(names)))
-    ax.set_xticklabels(names, rotation=90, ha="center")
+    # ✅ NEW: số trước, tên sau (tên được đẩy xuống bằng 1 dòng trống)
+    _set_xticklabels_with_space(ax, names, rotation=90)
+    _add_circled_index_above_names(ax, len(names), y_offset=-0.06, fontsize=10)
 
-    ax.set_ylabel("USD / m² / chu kì thuê")
+    ax.set_ylabel("USD / m² / năm")
     ax.set_title(
         f"BIỂU ĐỒ SO SÁNH GIÁ THUÊ ĐẤT {industrial_type.upper()} TỈNH {province.upper()}",
         fontsize=16,
@@ -201,11 +206,8 @@ def plot_price_bar_chart_base64(df, province: str, industrial_type: str) -> str:
             fontsize=9
         )
 
-    # ✅ NEW: số thứ tự bọc tròn dưới tên
-    _add_circled_index_under_ticks(ax, len(names), y_offset=-0.16, fontsize=10)
-
-    # ✅ Chừa chỗ nhiều hơn vì có thêm vòng tròn
-    fig.subplots_adjust(bottom=0.60)
+    # ✅ Chừa chỗ nhiều hơn cho tick label + số vòng tròn
+    fig.subplots_adjust(bottom=0.72)
 
     _add_footer(fig)
 
@@ -239,8 +241,9 @@ def plot_area_bar_chart_base64(df, province: str, industrial_type: str) -> str:
     fig, ax = plt.subplots(figsize=(20, 7))
     bars = ax.bar(range(len(names)), areas, width=0.6, color="green")
 
-    ax.set_xticks(range(len(names)))
-    ax.set_xticklabels(names, rotation=90, ha="center")
+    # ✅ NEW: số trước, tên sau
+    _set_xticklabels_with_space(ax, names, rotation=90)
+    _add_circled_index_above_names(ax, len(names), y_offset=-0.06, fontsize=10)
 
     ax.set_ylabel("Diện tích (ha)")
     ax.set_title(
@@ -264,10 +267,7 @@ def plot_area_bar_chart_base64(df, province: str, industrial_type: str) -> str:
             fontsize=9
         )
 
-    # ✅ NEW: số thứ tự bọc tròn dưới tên
-    _add_circled_index_under_ticks(ax, len(names), y_offset=-0.16, fontsize=10)
-
-    fig.subplots_adjust(bottom=0.60)
+    fig.subplots_adjust(bottom=0.72)
 
     _add_footer(fig)
 
@@ -313,16 +313,16 @@ def plot_price_bar_chart_two_provinces_base64(
     ax1, ax2 = axes
 
     bars1 = ax1.bar(range(len(names1)), prices1, width=0.6)
-    ax1.set_xticks(range(len(names1)))
-    ax1.set_xticklabels(names1, rotation=90, ha="center")
+    _set_xticklabels_with_space(ax1, names1, rotation=90)
+    _add_circled_index_above_names(ax1, len(names1), y_offset=-0.06, fontsize=10)
     ax1.set_ylabel("USD / m² / năm")
     ax1.set_title(f"{industrial_type.upper()} - {province1.upper()}",
                   fontsize=14, fontweight="bold", pad=10)
 
     bars2 = ax2.bar(range(len(names2)), prices2, width=0.6)
-    ax2.set_xticks(range(len(names2)))
-    ax2.set_xticklabels(names2, rotation=90, ha="center")
-    ax2.set_ylabel("USD / m² / chu kì thuê")
+    _set_xticklabels_with_space(ax2, names2, rotation=90)
+    _add_circled_index_above_names(ax2, len(names2), y_offset=-0.06, fontsize=10)
+    ax2.set_ylabel("USD / m² / năm")
     ax2.set_title(f"{industrial_type.upper()} - {province2.upper()}",
                   fontsize=14, fontweight="bold", pad=10)
 
@@ -338,10 +338,6 @@ def plot_price_bar_chart_two_provinces_base64(
         h = b.get_height()
         ax2.text(b.get_x() + b.get_width() / 2, h, f"{int(h)}", ha="center", va="bottom", fontsize=9)
 
-    # ✅ NEW: số thứ tự bọc tròn dưới tên (mỗi subplot)
-    _add_circled_index_under_ticks(ax1, len(names1), y_offset=-0.16, fontsize=10)
-    _add_circled_index_under_ticks(ax2, len(names2), y_offset=-0.16, fontsize=10)
-
     fig.suptitle(
         f"BIỂU ĐỒ SO SÁNH GIÁ THUÊ ĐẤT {industrial_type.upper()} GIỮA 2 TỈNH",
         fontsize=16,
@@ -349,8 +345,8 @@ def plot_price_bar_chart_two_provinces_base64(
         y=0.98
     )
 
-    # ✅ chừa chỗ nhiều hơn vì có thêm vòng tròn
-    fig.subplots_adjust(hspace=0.70, bottom=0.24, top=0.92)
+    # ✅ Chừa chỗ nhiều hơn cho tick + vòng tròn
+    fig.subplots_adjust(hspace=0.85, bottom=0.40, top=0.92)
 
     _add_footer(fig)
 
@@ -396,15 +392,15 @@ def plot_area_bar_chart_two_provinces_base64(
     ax1, ax2 = axes
 
     bars1 = ax1.bar(range(len(names1)), areas1, width=0.6, color="green")
-    ax1.set_xticks(range(len(names1)))
-    ax1.set_xticklabels(names1, rotation=90, ha="center")
+    _set_xticklabels_with_space(ax1, names1, rotation=90)
+    _add_circled_index_above_names(ax1, len(names1), y_offset=-0.06, fontsize=10)
     ax1.set_ylabel("Diện tích (ha)")
     ax1.set_title(f"{industrial_type.upper()} - {province1.upper()}",
                   fontsize=14, fontweight="bold", pad=10)
 
     bars2 = ax2.bar(range(len(names2)), areas2, width=0.6, color="green")
-    ax2.set_xticks(range(len(names2)))
-    ax2.set_xticklabels(names2, rotation=90, ha="center")
+    _set_xticklabels_with_space(ax2, names2, rotation=90)
+    _add_circled_index_above_names(ax2, len(names2), y_offset=-0.06, fontsize=10)
     ax2.set_ylabel("Diện tích (ha)")
     ax2.set_title(f"{industrial_type.upper()} - {province2.upper()}",
                   fontsize=14, fontweight="bold", pad=10)
@@ -421,10 +417,6 @@ def plot_area_bar_chart_two_provinces_base64(
         h = b.get_height()
         ax2.text(b.get_x() + b.get_width() / 2, h, f"{int(h)}", ha="center", va="bottom", fontsize=9)
 
-    # ✅ NEW: số thứ tự bọc tròn dưới tên (mỗi subplot)
-    _add_circled_index_under_ticks(ax1, len(names1), y_offset=-0.16, fontsize=10)
-    _add_circled_index_under_ticks(ax2, len(names2), y_offset=-0.16, fontsize=10)
-
     fig.suptitle(
         f"BIỂU ĐỒ SO SÁNH DIỆN TÍCH {industrial_type.upper()} GIỮA 2 TỈNH",
         fontsize=16,
@@ -432,7 +424,7 @@ def plot_area_bar_chart_two_provinces_base64(
         y=0.98
     )
 
-    fig.subplots_adjust(hspace=0.70, bottom=0.24, top=0.92)
+    fig.subplots_adjust(hspace=0.85, bottom=0.40, top=0.92)
 
     _add_footer(fig)
 
