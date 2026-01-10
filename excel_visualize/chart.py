@@ -12,24 +12,35 @@ import pytz
 # =========================
 def _clean_name(name: str, province: str) -> str:
     n = str(name).lower()
-    for kw in ["khu công nghiệp", "cụm công nghiệp", str(province).lower()]:
+    for kw in [
+        "khu công nghiệp",
+        "cụm công nghiệp",
+        str(province).lower()
+    ]:
         n = n.replace(kw, "")
     return n.strip().title()
 
 
 # =========================
-# ✅ Vẽ số + tên (CHUẨN – KHÔNG LỆCH)
+# ✅ NEW: vẽ số + tên bằng ax.text (đảm bảo thẳng hàng)
 # =========================
-def _draw_index_and_name(ax, names, number_y=-0.05, name_y=-0.17, fontsize_num=10, fontsize_name=9):
+def _draw_index_and_names(ax, names, number_y=-0.04, name_y=-0.16, name_rotation=90,
+                          fontsize_num=10, fontsize_name=9):
     """
-    - number_y: vị trí số (gần trục X)
-    - name_y: vị trí tên (nằm ngay dưới số)
+    Vẽ:
+      - số thứ tự bọc tròn (ở number_y)
+      - tên KCN/CCN (ở name_y) nằm NGAY DƯỚI số, cùng trục x
+
+    number_y, name_y: vị trí theo hệ ax.get_xaxis_transform()
+      0   = đúng tại trục X
+      âm  = xuống dưới
     """
-    ax.set_xticks(range(len(names)))
-    ax.set_xticklabels([])  # ❌ bỏ ticklabel mặc định
+    n = len(names)
+    ax.set_xticks(range(n))
+    ax.set_xticklabels([])  # ✅ bỏ ticklabel mặc định để tránh lệch
 
     for i, name in enumerate(names):
-        # 🔢 Số thứ tự (bọc tròn)
+        # số thứ tự bọc tròn
         ax.text(
             i,
             number_y,
@@ -47,7 +58,7 @@ def _draw_index_and_name(ax, names, number_y=-0.05, name_y=-0.17, fontsize_num=1
             clip_on=False
         )
 
-        # 🏷️ Tên KCN / CCN (xoay 90°, nằm NGAY DƯỚI số)
+        # tên nằm ngay dưới số (cùng x = i)
         ax.text(
             i,
             name_y,
@@ -55,43 +66,132 @@ def _draw_index_and_name(ax, names, number_y=-0.05, name_y=-0.17, fontsize_num=1
             transform=ax.get_xaxis_transform(),
             ha="center",
             va="top",
-            rotation=90,
+            rotation=name_rotation,
             fontsize=fontsize_name,
             clip_on=False
         )
 
 
 # =========================
-# 2️⃣ Footer
+# 2️⃣ Dán logo vào ảnh PNG (ăn chắc)
+# =========================
+def _overlay_logo_on_png_bytes(
+    png_bytes: bytes,
+    alpha: float = 0.9,
+    scale: float = 0.08,
+    padding: int = 20
+) -> bytes:
+    logo_path = os.path.join(os.path.dirname(__file__), "assets", "company_logos.png")
+    if not os.path.exists(logo_path):
+        return png_bytes
+
+    try:
+        base_img = Image.open(io.BytesIO(png_bytes)).convert("RGBA")
+        logo = Image.open(logo_path).convert("RGBA")
+    except Exception:
+        return png_bytes
+
+    new_w = max(1, int(base_img.size[0] * scale))
+    ratio = new_w / logo.size[0]
+    new_h = max(1, int(logo.size[1] * ratio))
+    logo = logo.resize((new_w, new_h), Image.LANCZOS)
+
+    if alpha < 1.0:
+        r, g, b, a = logo.split()
+        a = a.point(lambda p: int(p * alpha))
+        logo = Image.merge("RGBA", (r, g, b, a))
+
+    x = base_img.size[0] - new_w - padding
+    y = padding
+    base_img.paste(logo, (x, y), logo)
+
+    out = io.BytesIO()
+    base_img.convert("RGB").save(out, format="PNG")
+    return out.getvalue()
+
+
+def _overlay_qr_on_png_bytes(
+    png_bytes: bytes,
+    alpha: float = 1.0,
+    scale: float = 0.12,
+    padding: int = 20
+) -> bytes:
+    qr_path = os.path.join(os.path.dirname(__file__), "assets", "chatiip.png")
+    if not os.path.exists(qr_path):
+        return png_bytes
+
+    try:
+        base_img = Image.open(io.BytesIO(png_bytes)).convert("RGBA")
+        qr = Image.open(qr_path).convert("RGBA")
+    except Exception:
+        return png_bytes
+
+    new_w = max(1, int(base_img.size[0] * scale))
+    ratio = new_w / qr.size[0]
+    new_h = max(1, int(qr.size[1] * ratio))
+    qr = qr.resize((new_w, new_h), Image.LANCZOS)
+
+    if alpha < 1.0:
+        r, g, b, a = qr.split()
+        a = a.point(lambda p: int(p * alpha))
+        qr = Image.merge("RGBA", (r, g, b, a))
+
+    x = base_img.size[0] - new_w - padding
+    y = base_img.size[1] - new_h - padding
+    base_img.paste(qr, (x, y), qr)
+
+    out = io.BytesIO()
+    base_img.convert("RGB").save(out, format="PNG")
+    return out.getvalue()
+
+
+# =========================
+# 3️⃣ Footer (giờ Việt Nam)
 # =========================
 def _add_footer(fig):
     tz_vn = pytz.timezone("Asia/Ho_Chi_Minh")
     now = datetime.now(tz_vn)
+
+    footer_text = (
+        f"Biểu đồ được tạo bởi ChatIIP.com lúc "
+        f"{now.hour:02d} giờ {now.minute:02d} phút "
+        f"ngày {now.day:02d} tháng {now.month:02d} năm {now.year}, "
+        f"dữ liệu lấy từ IIPMap.com"
+    )
+
     fig.text(
         0.5,
         0.03,
-        f"Biểu đồ được tạo bởi ChatIIP.com lúc {now:%H giờ %M phút ngày %d/%m/%Y}, dữ liệu từ IIPMap.com",
+        footer_text,
         ha="center",
-        fontsize=14
+        va="center",
+        fontsize=15,
+        color="black"
     )
 
 
 # =========================
-# 3️⃣ BIỂU ĐỒ GIÁ – 1 TỈNH
+# 4️⃣ Vẽ biểu đồ so sánh giá thuê đất (base64)
 # =========================
 def plot_price_bar_chart_base64(df, province: str, industrial_type: str) -> str:
     df = df.copy()
+
     df["Tên rút gọn"] = df["Tên"].apply(lambda x: _clean_name(x, province))
-    df = df.dropna(subset=["Giá số"]).sort_values("Giá số")
+
+    df = df.dropna(subset=["Giá số"])
+    df["Giá số"] = df["Giá số"].astype(float)
+
+    df = df.sort_values(by="Giá số", ascending=True)
 
     names = df["Tên rút gọn"].tolist()
     prices = df["Giá số"].tolist()
 
-    fig, ax = plt.subplots(figsize=(36, 10))
+    fig, ax = plt.subplots(figsize=(32, 10))
     bars = ax.bar(range(len(names)), prices, width=0.6)
 
-    # ✅ VẼ SỐ + TÊN ĐÚNG TRỤC
-    _draw_index_and_name(ax, names)
+    # ✅ thay set_xticklabels + circled_index bằng 1 hàm vẽ chuẩn
+    _draw_index_and_names(ax, names, number_y=-0.04, name_y=-0.16, name_rotation=90,
+                          fontsize_num=10, fontsize_name=9)
 
     ax.set_ylabel("USD / m² / chu kì thuê", fontsize=14)
     ax.set_title(
@@ -101,22 +201,247 @@ def plot_price_bar_chart_base64(df, province: str, industrial_type: str) -> str:
         pad=18
     )
 
-    for b in bars:
+    max_price = max(prices) if prices else 0
+    ax.set_ylim(0, max_price * 1.15 if max_price > 0 else 1)
+
+    for bar in bars:
+        height = bar.get_height()
         ax.text(
-            b.get_x() + b.get_width() / 2,
-            b.get_height(),
-            f"{int(b.get_height())}",
+            bar.get_x() + bar.get_width() / 2,
+            height,
+            f"{int(height)}",
             ha="center",
             va="bottom",
             fontsize=10
         )
 
-    ax.set_ylim(0, max(prices) * 1.15)
+    # ✅ chừa chỗ đủ cho phần số + tên bên dưới + footer
     fig.subplots_adjust(bottom=0.45)
 
     _add_footer(fig)
 
-    buf = io.BytesIO()
-    fig.savefig(buf, dpi=200)
+    buffer = io.BytesIO()
+    fig.savefig(buffer, format="png", dpi=200)
     plt.close(fig)
-    return base64.b64encode(buf.getvalue()).decode("utf-8")
+
+    png_bytes = buffer.getvalue()
+    png_bytes = _overlay_logo_on_png_bytes(png_bytes, alpha=0.9, scale=0.08, padding=20)
+    png_bytes = _overlay_qr_on_png_bytes(png_bytes, alpha=1.0, scale=0.08, padding=20)
+
+    return base64.b64encode(png_bytes).decode("utf-8")
+
+
+# =========================
+# 5️⃣ Vẽ biểu đồ so sánh tổng diện tích (base64)
+# =========================
+def plot_area_bar_chart_base64(df, province: str, industrial_type: str) -> str:
+    df = df.copy()
+
+    df["Tên rút gọn"] = df["Tên"].apply(lambda x: _clean_name(x, province))
+
+    df = df.dropna(subset=["Tổng diện tích"])
+    df["Tổng diện tích"] = df["Tổng diện tích"].astype(float)
+
+    df = df.sort_values(by="Tổng diện tích", ascending=True)
+
+    names = df["Tên rút gọn"].tolist()
+    areas = df["Tổng diện tích"].tolist()
+
+    fig, ax = plt.subplots(figsize=(32, 10))
+    bars = ax.bar(range(len(names)), areas, width=0.6, color="green")
+
+    # ✅ vẽ số + tên chuẩn, không lệch
+    _draw_index_and_names(ax, names, number_y=-0.04, name_y=-0.16, name_rotation=90,
+                          fontsize_num=10, fontsize_name=9)
+
+    ax.set_ylabel("Diện tích (ha)", fontsize=14)
+    ax.set_title(
+        f"BIỂU ĐỒ SO SÁNH TỔNG DIỆN TÍCH {industrial_type.upper()} TỈNH {province.upper()}",
+        fontsize=20,
+        fontweight="bold",
+        pad=18
+    )
+
+    max_area = max(areas) if areas else 0
+    ax.set_ylim(0, max_area * 1.15 if max_area > 0 else 1)
+
+    for bar in bars:
+        height = bar.get_height()
+        ax.text(
+            bar.get_x() + bar.get_width() / 2,
+            height,
+            f"{int(height)}",
+            ha="center",
+            va="bottom",
+            fontsize=10
+        )
+
+    fig.subplots_adjust(bottom=0.45)
+
+    _add_footer(fig)
+
+    buffer = io.BytesIO()
+    fig.savefig(buffer, format="png", dpi=200)
+    plt.close(fig)
+
+    png_bytes = buffer.getvalue()
+    png_bytes = _overlay_logo_on_png_bytes(png_bytes, alpha=0.9, scale=0.08, padding=20)
+    png_bytes = _overlay_qr_on_png_bytes(png_bytes, alpha=1.0, scale=0.08, padding=20)
+
+    return base64.b64encode(png_bytes).decode("utf-8")
+
+
+# =========================
+# 6️⃣ Vẽ 2 biểu đồ giá (2 tỉnh) xếp dọc (base64)
+# =========================
+def plot_price_bar_chart_two_provinces_base64(
+    df1,
+    province1: str,
+    df2,
+    province2: str,
+    industrial_type: str
+) -> str:
+    df1 = df1.copy()
+    df2 = df2.copy()
+
+    df1["Tên rút gọn"] = df1["Tên"].apply(lambda x: _clean_name(x, province1))
+    df2["Tên rút gọn"] = df2["Tên"].apply(lambda x: _clean_name(x, province2))
+
+    df1 = df1.dropna(subset=["Giá số"])
+    df2 = df2.dropna(subset=["Giá số"])
+    df1["Giá số"] = df1["Giá số"].astype(float)
+    df2["Giá số"] = df2["Giá số"].astype(float)
+
+    df1 = df1.sort_values(by="Giá số", ascending=True)
+    df2 = df2.sort_values(by="Giá số", ascending=True)
+
+    names1, prices1 = df1["Tên rút gọn"].tolist(), df1["Giá số"].tolist()
+    names2, prices2 = df2["Tên rút gọn"].tolist(), df2["Giá số"].tolist()
+
+    fig, axes = plt.subplots(nrows=2, ncols=1, figsize=(34, 18))
+    ax1, ax2 = axes
+
+    bars1 = ax1.bar(range(len(names1)), prices1, width=0.6)
+    _draw_index_and_names(ax1, names1, number_y=-0.04, name_y=-0.16, name_rotation=90,
+                          fontsize_num=10, fontsize_name=9)
+    ax1.set_ylabel("USD / m² / chu kì thuê", fontsize=13)
+    ax1.set_title(f"{industrial_type.upper()} - {province1.upper()}",
+                  fontsize=16, fontweight="bold", pad=10)
+
+    bars2 = ax2.bar(range(len(names2)), prices2, width=0.6)
+    _draw_index_and_names(ax2, names2, number_y=-0.04, name_y=-0.16, name_rotation=90,
+                          fontsize_num=10, fontsize_name=9)
+    ax2.set_ylabel("USD / m² / chu kì thuê", fontsize=13)
+    ax2.set_title(f"{industrial_type.upper()} - {province2.upper()}",
+                  fontsize=16, fontweight="bold", pad=10)
+
+    max_all = max((max(prices1) if prices1 else 0), (max(prices2) if prices2 else 0))
+    ax1.set_ylim(0, max_all * 1.15 if max_all > 0 else 1)
+    ax2.set_ylim(0, max_all * 1.15 if max_all > 0 else 1)
+
+    for b in bars1:
+        h = b.get_height()
+        ax1.text(b.get_x() + b.get_width() / 2, h, f"{int(h)}", ha="center", va="bottom", fontsize=10)
+
+    for b in bars2:
+        h = b.get_height()
+        ax2.text(b.get_x() + b.get_width() / 2, h, f"{int(h)}", ha="center", va="bottom", fontsize=10)
+
+    fig.suptitle(
+        f"BIỂU ĐỒ SO SÁNH GIÁ THUÊ ĐẤT {industrial_type.upper()} GIỮA 2 TỈNH",
+        fontsize=20,
+        fontweight="bold",
+        y=0.98
+    )
+
+    fig.subplots_adjust(hspace=0.90, bottom=0.22, top=0.92)
+
+    _add_footer(fig)
+
+    buffer = io.BytesIO()
+    fig.savefig(buffer, format="png", dpi=200)
+    plt.close(fig)
+
+    png_bytes = buffer.getvalue()
+    png_bytes = _overlay_logo_on_png_bytes(png_bytes, alpha=0.9, scale=0.08, padding=20)
+    png_bytes = _overlay_qr_on_png_bytes(png_bytes, alpha=1.0, scale=0.08, padding=20)
+
+    return base64.b64encode(png_bytes).decode("utf-8")
+
+
+# =========================
+# 7️⃣ Vẽ 2 biểu đồ diện tích (2 tỉnh) xếp dọc (base64)
+# =========================
+def plot_area_bar_chart_two_provinces_base64(
+    df1,
+    province1: str,
+    df2,
+    province2: str,
+    industrial_type: str
+) -> str:
+    df1 = df1.copy()
+    df2 = df2.copy()
+
+    df1["Tên rút gọn"] = df1["Tên"].apply(lambda x: _clean_name(x, province1))
+    df2["Tên rút gọn"] = df2["Tên"].apply(lambda x: _clean_name(x, province2))
+
+    df1 = df1.dropna(subset=["Tổng diện tích"])
+    df2 = df2.dropna(subset=["Tổng diện tích"])
+    df1["Tổng diện tích"] = df1["Tổng diện tích"].astype(float)
+    df2["Tổng diện tích"] = df2["Tổng diện tích"].astype(float)
+
+    df1 = df1.sort_values(by="Tổng diện tích", ascending=True)
+    df2 = df2.sort_values(by="Tổng diện tích", ascending=True)
+
+    names1, areas1 = df1["Tên rút gọn"].tolist(), df1["Tổng diện tích"].tolist()
+    names2, areas2 = df2["Tên rút gọn"].tolist(), df2["Tổng diện tích"].tolist()
+
+    fig, axes = plt.subplots(nrows=2, ncols=1, figsize=(34, 18))
+    ax1, ax2 = axes
+
+    bars1 = ax1.bar(range(len(names1)), areas1, width=0.6, color="green")
+    _draw_index_and_names(ax1, names1, number_y=-0.04, name_y=-0.16, name_rotation=90,
+                          fontsize_num=10, fontsize_name=9)
+    ax1.set_ylabel("Diện tích (ha)", fontsize=13)
+    ax1.set_title(f"{industrial_type.upper()} - {province1.upper()}",
+                  fontsize=16, fontweight="bold", pad=10)
+
+    bars2 = ax2.bar(range(len(names2)), areas2, width=0.6, color="green")
+    _draw_index_and_names(ax2, names2, number_y=-0.04, name_y=-0.16, name_rotation=90,
+                          fontsize_num=10, fontsize_name=9)
+    ax2.set_ylabel("Diện tích (ha)", fontsize=13)
+    ax2.set_title(f"{industrial_type.upper()} - {province2.upper()}",
+                  fontsize=16, fontweight="bold", pad=10)
+
+    max_all = max((max(areas1) if areas1 else 0), (max(areas2) if areas2 else 0))
+    ax1.set_ylim(0, max_all * 1.15 if max_all > 0 else 1)
+    ax2.set_ylim(0, max_all * 1.15 if max_all > 0 else 1)
+
+    for b in bars1:
+        h = b.get_height()
+        ax1.text(b.get_x() + b.get_width() / 2, h, f"{int(h)}", ha="center", va="bottom", fontsize=10)
+
+    for b in bars2:
+        h = b.get_height()
+        ax2.text(b.get_x() + b.get_width() / 2, h, f"{int(h)}", ha="center", va="bottom", fontsize=10)
+
+    fig.suptitle(
+        f"BIỂU ĐỒ SO SÁNH DIỆN TÍCH {industrial_type.upper()} GIỮA 2 TỈNH",
+        fontsize=20,
+        fontweight="bold",
+        y=0.98
+    )
+
+    fig.subplots_adjust(hspace=0.90, bottom=0.22, top=0.92)
+
+    _add_footer(fig)
+
+    buffer = io.BytesIO()
+    fig.savefig(buffer, format="png", dpi=200)
+    plt.close(fig)
+
+    png_bytes = buffer.getvalue()
+    png_bytes = _overlay_logo_on_png_bytes(png_bytes, alpha=0.9, scale=0.08, padding=20)
+    png_bytes = _overlay_qr_on_png_bytes(png_bytes, alpha=1.0, scale=0.08, padding=20)
+
+    return base64.b64encode(png_bytes).decode("utf-8")
