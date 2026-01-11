@@ -1,12 +1,11 @@
 # main_local.py
 
-from fastapi import FastAPI, Request, HTTPException
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import os
 import uvicorn
-from typing import Optional, Any
-from datetime import datetime
+from typing import Optional, Any, Dict
 from starlette.concurrency import run_in_threadpool
 
 from mst.router import is_mst_query
@@ -19,8 +18,29 @@ from excel_visualize import (
 
 import json
 from pathlib import Path
+import inspect
 
 from excel_query.excel_query import ExcelQueryHandler
+
+
+# ===============================
+# Helper: parse JSON string (flowchart/excel json từ pipeline)
+# ===============================
+def try_parse_json_string(s: Any):
+    """
+    Nếu s là JSON string thì parse ra dict/list; không thì trả None.
+    """
+    if not isinstance(s, str):
+        return None
+    t = s.strip()
+    if not t:
+        return None
+    if (t.startswith("{") and t.endswith("}")) or (t.startswith("[") and t.endswith("]")):
+        try:
+            return json.loads(t)
+        except Exception:
+            return None
+    return None
 
 
 # ===============================
@@ -40,7 +60,7 @@ except ImportError as e:
 # Lấy các hằng số từ app.py
 # ===============================
 CONTACT_TRIGGER_RESPONSE = None
-if CHATBOT_AVAILABLE and hasattr(app, 'CONTACT_TRIGGER_RESPONSE'):
+if CHATBOT_AVAILABLE and hasattr(app, "CONTACT_TRIGGER_RESPONSE"):
     CONTACT_TRIGGER_RESPONSE = app.CONTACT_TRIGGER_RESPONSE
     print("✅ [LOCAL] Đã load CONTACT_TRIGGER_RESPONSE từ app.py")
 else:
@@ -56,7 +76,7 @@ else:
 # ===============================
 SHEET_AVAILABLE = False
 try:
-    if CHATBOT_AVAILABLE and hasattr(app, 'save_contact_info') and hasattr(app, 'is_valid_phone'):
+    if CHATBOT_AVAILABLE and hasattr(app, "save_contact_info") and hasattr(app, "is_valid_phone"):
         SHEET_AVAILABLE = True
         print("✅ [LOCAL] Google Sheet functions đã sẵn sàng từ app.py")
     else:
@@ -125,6 +145,7 @@ excel_kcn_handler = ExcelQueryHandler(
 print("✅ [LOCAL] Endpoints test nhanh:")
 print("   - GET  http://127.0.0.1:10000/")
 print("   - POST http://127.0.0.1:10000/chat  body: {\"question\":\"Danh sách khu công nghiệp ở Bắc Ninh\"}")
+print("   - POST http://127.0.0.1:10000/chat  body: {\"question\":\"Vẽ flowchart luồng web nông dân\"}")
 
 
 # ---------------------------------------
@@ -160,12 +181,12 @@ async def home():
 # ---------------------------------------
 @app_fastapi.post("/chat", summary="Dự đoán/Trả lời câu hỏi từ Chatbot")
 async def predict(data: Question):
-    question = data.question.strip()
+    question = (data.question or "").strip()
     if not question:
         raise HTTPException(status_code=400, detail="Thiếu trường 'question' hoặc câu hỏi bị rỗng.")
 
     try:
-        answer = None
+        answer: Optional[str] = None
         requires_contact = False
 
         # ===============================
@@ -173,15 +194,38 @@ async def predict(data: Question):
         # ===============================
         payload = handle_law_count_query(question)
         if isinstance(payload, dict) and payload.get("intent") == "law_count":
+            if not CHATBOT_AVAILABLE or not hasattr(app, "chatbot"):
+                return {"answer": "Backend chưa sẵn sàng (không import được app.py/chatbot).", "requires_contact": False}
+
             response = await run_in_threadpool(
                 app.chatbot.invoke,
                 {"message": question, "law_count": payload["total_laws"]},
                 config={"configurable": {"session_id": "api_session"}}
             )
+
+            # ✅ NEW: parse flowchart json nếu có
+            parsed = try_parse_json_string(response)
+            if isinstance(parsed, dict) and parsed.get("type") == "flowchart":
+                return {
+                    "answer": "Đây là flowchart do ChatIIP tạo cho bạn:",
+                    "type": "flowchart",
+                    "payload": {
+                        "format": parsed.get("format", "mermaid"),
+                        "code": parsed.get("code", ""),
+                        "explanation": parsed.get("explanation", "")
+                    },
+                    "requires_contact": False
+                }
+
             return {"answer": response, "requires_contact": False}
 
-        # ====== MST INTENT (ƯU TIÊN CAO NHẤT) ======
+        # ===============================
+        # MST INTENT (ƯU TIÊN CAO NHẤT)
+        # ===============================
         if is_mst_query(question):
+            if not CHATBOT_AVAILABLE:
+                return {"answer": "Backend chưa sẵn sàng (không import được app.py).", "requires_contact": False}
+
             mst_answer = await run_in_threadpool(
                 handle_mst_query,
                 message=question,
@@ -190,8 +234,13 @@ async def predict(data: Question):
             )
             return {"answer": mst_answer, "requires_contact": False}
 
-        # ====== EXCEL VISUALIZE ======
+        # ===============================
+        # EXCEL VISUALIZE
+        # ===============================
         if is_excel_visualize_intent(question):
+            if not CHATBOT_AVAILABLE:
+                return {"answer": "Backend chưa sẵn sàng (không import được app.py).", "requires_contact": False}
+
             excel_result = await run_in_threadpool(
                 handle_excel_visualize,
                 message=question,
@@ -267,43 +316,56 @@ async def predict(data: Question):
         # ===============================
         # 2️⃣ FALLBACK: gọi chatbot thật
         # ===============================
-        if CHATBOT_AVAILABLE and hasattr(app, "chatbot"):
+        if CHATBOT_AVAILABLE and hasattr(app, "chatbot") and hasattr(app.chatbot, "invoke"):
             session = "api_session"
-            if hasattr(app.chatbot, 'invoke'):
-                try:
-                    import inspect
-                    if inspect.iscoroutinefunction(app.chatbot.invoke):
-                        response = await app.chatbot.invoke(
-                            {"message": question},
-                            config={"configurable": {"session_id": session}}
-                        )
-                    else:
-                        response = await run_in_threadpool(
-                            app.chatbot.invoke,
-                            {"message": question},
-                            config={"configurable": {"session_id": session}}
-                        )
+            try:
+                # invoke async hay sync?
+                if inspect.iscoroutinefunction(app.chatbot.invoke):
+                    response = await app.chatbot.invoke(
+                        {"message": question},
+                        config={"configurable": {"session_id": session}}
+                    )
+                else:
+                    response = await run_in_threadpool(
+                        app.chatbot.invoke,
+                        {"message": question},
+                        config={"configurable": {"session_id": session}}
+                    )
 
-                    if isinstance(response, dict) and 'output' in response:
-                        answer = response['output']
-                    elif isinstance(response, str):
-                        answer = response
-                    else:
-                        answer = f"Lỗi: Chatbot trả về định dạng không mong muốn: {repr(response)}"
+                # Chuẩn hóa sang string
+                if isinstance(response, dict) and "output" in response:
+                    answer = response["output"]
+                elif isinstance(response, str):
+                    answer = response
+                else:
+                    answer = f"Lỗi: Chatbot trả về định dạng không mong muốn: {repr(response)}"
 
-                    if answer and answer.strip() == CONTACT_TRIGGER_RESPONSE.strip():
-                        requires_contact = True
+                # ✅ NEW: parse JSON string từ pipeline (FLOWCHART)
+                parsed = try_parse_json_string(answer)
+                if isinstance(parsed, dict) and parsed.get("type") == "flowchart":
+                    return {
+                        "answer": "Đây là flowchart do ChatIIP tạo cho bạn:",
+                        "type": "flowchart",
+                        "payload": {
+                            "format": parsed.get("format", "mermaid"),
+                            "code": parsed.get("code", ""),
+                            "explanation": parsed.get("explanation", "")
+                        },
+                        "requires_contact": False
+                    }
 
-                except Exception as invoke_error:
-                    print(f"❌ [LOCAL] Lỗi khi gọi chatbot.invoke: {invoke_error}")
-                    answer = "Xin lỗi, đã xảy ra lỗi khi xử lý câu hỏi của bạn."
-            else:
-                answer = "Lỗi: Chatbot không có phương thức invoke"
+                # Trigger contact
+                if answer and answer.strip() == CONTACT_TRIGGER_RESPONSE.strip():
+                    requires_contact = True
+
+            except Exception as invoke_error:
+                print(f"❌ [LOCAL] Lỗi khi gọi chatbot.invoke: {invoke_error}")
+                answer = "Xin lỗi, đã xảy ra lỗi khi xử lý câu hỏi của bạn."
         else:
             answer = f"(Chatbot mô phỏng - LỖI BACKEND: Không tìm thấy đối tượng app.chatbot) Bạn hỏi: '{question}'"
 
         # Nếu gửi phone sớm
-        if data.phone and SHEET_AVAILABLE:
+        if data.phone and SHEET_AVAILABLE and CHATBOT_AVAILABLE:
             try:
                 await run_in_threadpool(
                     app.save_contact_info,
@@ -316,6 +378,8 @@ async def predict(data: Question):
 
         return {"answer": answer, "requires_contact": requires_contact}
 
+    except HTTPException:
+        raise
     except Exception as e:
         print(f"❌ [LOCAL] LỖI CHATBOT: {e}")
         raise HTTPException(status_code=500, detail=f"Lỗi xử lý Chatbot: {str(e)}")
@@ -326,10 +390,10 @@ async def predict(data: Question):
 # ---------------------------------------
 @app_fastapi.post("/submit-contact", summary="Gửi thông tin liên hệ sau khi chatbot yêu cầu")
 async def submit_contact(data: ContactInfo):
-    if not SHEET_AVAILABLE:
+    if not SHEET_AVAILABLE or not CHATBOT_AVAILABLE:
         raise HTTPException(status_code=503, detail="Google Sheet không khả dụng.")
 
-    phone = data.phone.strip()
+    phone = (data.phone or "").strip()
     if not app.is_valid_phone(phone):
         raise HTTPException(status_code=400, detail="Số điện thoại không hợp lệ.")
 
@@ -369,7 +433,7 @@ async def get_status():
             "error": "Module app.py không được import thành công"
         }
 
-    vectordb_info = {}
+    vectordb_info: Dict[str, Any] = {}
     try:
         stats = app.get_vectordb_stats()
         vectordb_info = {

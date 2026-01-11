@@ -112,7 +112,14 @@ PDF_READER_SYS = (
 
     "NHÓM 3 - CÂU HỎI PHÁP LUẬT / BẤT ĐỘNG SẢN / KHU CỤM CÔNG NGHIỆP:\n"
     "- Chỉ khi câu hỏi thuộc nhóm này mới được phép phân tích nội dung.\n\n"
-
+    
+    "NHÓM 4 - VẼ FLOWCHART / SƠ ĐỒ QUY TRÌNH (MERMAID):\n"
+    "- Bao gồm các yêu cầu như: vẽ flowchart, vẽ sơ đồ luồng, vẽ quy trình, diagram workflow, mermaid.\n"
+    "- Khi gặp nhóm này:\n"
+    "  (1) Tạo Mermaid flowchart (bắt đầu bằng flowchart TD hoặc flowchart LR).\n"
+    "  (2) Sau đó giải thích từng phần mục (node/nhánh) của flowchart theo dạng gạch đầu dòng.\n"
+    "- Không áp dụng ràng buộc 'chỉ dựa vào tài liệu pháp luật' cho nhóm này.\n"
+    "- Ngôn ngữ đầu ra phải đúng ngôn ngữ người dùng.\n\n"
     "NGUYÊN TẮC TRẢ LỜI PHÁP LUẬT:\n"
     "1) Chỉ trả lời khi nội dung CÓ trong tài liệu đã cung cấp.\n"
     "2) Luôn nêu rõ tên văn bản pháp luật và điều, khoản cụ thể.\n"

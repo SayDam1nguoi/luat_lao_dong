@@ -2,29 +2,17 @@
 
 from typing import Dict, Any, List
 from langchain_core.messages import SystemMessage, HumanMessage, BaseMessage
-
+import json
 from data_processing.cleaning import clean_question_remove_uris
 from data_processing.language import detect_language_openai, convert_language
 from data_processing.context_builder import build_context_from_hits
 from system_prompts.pdf_reader_system import PDF_READER_SYS
-from data_processing.intent import is_vsic_code_query
+from data_processing.intent import is_vsic_code_query, is_flowchart_intent, is_greeting_question
 
 
 # ======================================================
 # NHẬN DIỆN CHÀO HỎI / CÂU HỎI CHUNG CHUNG
 # ======================================================
-def is_greeting_question(question: str) -> bool:
-    greetings = [
-        # VI
-        "xin chào", "chào", "chào bạn", "chào anh", "chào chị",
-        "bạn là ai", "bạn làm được gì", "giúp tôi", "giúp mình","bạn biết làm những gì", "chatiip là gì"
-        # EN
-        "hello", "hi", "hey", "good morning", "good afternoon", "good evening",
-        "who are you", "what can you do", "help me"
-    ]
-    q = question.lower().strip()
-    return any(q in g or q.startswith(g) for g in greetings)
-
 
 GREETING_VI = (
     "Xin chào Quý khách! ChatIIP là sản phẩm trong hệ sinh thái của CTCP IIP, "
@@ -53,6 +41,28 @@ def is_labor_related_question(question: str) -> bool:
     q = question.lower()
     return any(k in q for k in keywords)
 
+# NHẬN DIỆN INTENT VẼ FLOWCHART / SƠ ĐỒ LUỒNG / QUY TRÌNH
+
+
+FLOWCHART_SYS = (
+    "Bạn là trợ lý chuyên vẽ FLOWCHART bằng Mermaid.\n"
+    "QUY TẮC BẮT BUỘC:\n"
+    "- Chỉ trả về DUY NHẤT code Mermaid, không giải thích, không markdown fence.\n"
+    "- Bắt đầu bằng: flowchart TD hoặc flowchart LR.\n"
+    "- Node ngắn gọn, rõ ràng; ưu tiên dùng A[...], B{...}, C(...).\n"
+    "- Nếu thiếu thông tin, tự giả định hợp lý để hoàn chỉnh sơ đồ.\n"
+)
+
+FLOWCHART_EXPLAIN_SYS = (
+    "Bạn là trợ lý giải thích flowchart.\n"
+    "Đầu vào gồm: (1) Mermaid code, (2) mô tả yêu cầu người dùng.\n"
+    "NHIỆM VỤ:\n"
+    "- Giải thích từng phần mục của flowchart một cách rõ ràng, dễ hiểu.\n"
+    "- Bắt buộc bám sát Mermaid code đã cho (không tự ý thêm bước không có).\n"
+    "- Trình bày theo dạng gạch đầu dòng.\n"
+    "- Nếu có nhánh điều kiện (node dạng {..}), giải thích rõ từng nhánh.\n"
+    "- Dùng đúng ngôn ngữ của người dùng.\n"
+)
 
 # ======================================================
 # PIPELINE TRUNG TÂM
@@ -85,6 +95,67 @@ def process_pdf_question(
             return GREETING_VI
         return convert_language(GREETING_VI, user_lang, lang_llm)
 
+    # ============================
+    # 0️⃣.2 FLOWCHART (MERMAID + GIẢI THÍCH)
+    # ============================
+    if is_flowchart_intent(clean_question):
+        # 1) Sinh Mermaid code
+        system_prompt = FLOWCHART_SYS + f"\nNgười dùng đang dùng ngôn ngữ: '{user_lang}'."
+        messages = [SystemMessage(content=system_prompt)]
+        if history:
+            messages.extend(history[-10:])
+
+        messages.append(HumanMessage(
+            content=f"""
+Yêu cầu: {clean_question}
+
+Hãy xuất Mermaid flowchart theo đúng ngôn ngữ: {user_lang}.
+"""
+        ))
+
+        mermaid_code = llm.invoke(messages).content.strip()
+
+        # Fallback nếu model trả sai format
+        if not mermaid_code.lower().startswith("flowchart"):
+            mermaid_code = (
+                "flowchart TD\n"
+                "A[Không tạo được flowchart] --> B[Hãy mô tả rõ hơn yêu cầu]"
+            )
+
+        # 2) Giải thích từng phần mục của flowchart (bám sát Mermaid code)
+        explain_messages = [
+            SystemMessage(
+                content=FLOWCHART_EXPLAIN_SYS + f"\nNgười dùng đang dùng ngôn ngữ: '{user_lang}'."
+            )
+        ]
+
+        explain_messages.append(HumanMessage(
+            content=f"""
+MÔ TẢ NGƯỜI DÙNG:
+{clean_question}
+
+MERMAID CODE:
+{mermaid_code}
+
+Hãy giải thích "từng phần mục" của flowchart:
+- Giải thích từng node theo thứ tự luồng đi.
+- Nếu có nhánh điều kiện, giải thích từng nhánh.
+- Kết thúc bằng 1-2 câu tóm tắt flow tổng thể.
+"""
+        ))
+
+        explanation = llm.invoke(explain_messages).content.strip()
+
+        # 3) Trả về JSON string
+        return json.dumps(
+            {
+                "type": "flowchart",
+                "format": "mermaid",
+                "code": mermaid_code,
+                "explanation": explanation
+            },
+            ensure_ascii=False
+        )
     # ============================
     # 1️⃣ ƯU TIÊN EXCEL
     # ============================

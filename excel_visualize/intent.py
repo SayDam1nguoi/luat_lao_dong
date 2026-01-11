@@ -11,7 +11,6 @@ def is_excel_visualize_intent(message: str) -> bool:
     """
     keywords = [
         "biểu đồ",
-        "vẽ",
         "so sánh",
         "visualize",
         "trực quan",
