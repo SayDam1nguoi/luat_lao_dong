@@ -46,7 +46,7 @@ def _parse_area_to_float(value) -> Optional[float]:
 
     s = str(value).lower().strip()
     
-    # Loại bỏ đơn vị, thay dấu phẩy thành chấm
+    # Loại bỏ đơn vị, thay dấu phẩy thành chấm (VD: 1,5 ha -> 1.5)
     s = s.replace("ha", "").replace("hecta", "").replace(",", ".").strip()
     
     try:

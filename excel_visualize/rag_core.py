@@ -90,7 +90,7 @@ class ExcelQueryAgent:
 
     def retrieve_filters(self, user_query: str) -> Dict[str, Any]:
         """
-        Phân tích câu hỏi nâng cao cho cả Giá và Diện tích.
+        Phân tích câu hỏi nâng cao: Hỗ trợ Giá, Diện tích, và BIỂU ĐỒ ĐÔI (Dual).
         """
         if self.df.empty:
              return {"filter_type": "error", "message": "Chưa load được dữ liệu Excel."}
@@ -104,42 +104,38 @@ class ExcelQueryAgent:
         DANH SÁCH TỈNH: [{provinces_list}]
         CÂU HỎI: "{query}"
         
-        NHIỆM VỤ: Trích xuất JSON điều kiện lọc.
+        NHIỆM VỤ: Trích xuất JSON điều kiện lọc và LOẠI BIỂU ĐỒ.
         
         1. "target_type": "Khu công nghiệp" hoặc "Cụm công nghiệp".
         
         2. "filter_type": 
            - "province": Nếu user hỏi về Tỉnh.
-           - "specific_zones": Nếu hỏi về Tên KCN hoặc lọc theo số liệu (giá/diện tích).
+           - "specific_zones": Nếu hỏi về Tên KCN hoặc lọc theo số liệu.
         
         3. "search_keywords":
            - Tên Tỉnh (nếu filter_type=province).
            - Tên KCN cụ thể hoặc Thương hiệu (VSIP, Amata...).
-           - Nếu là Tên KCN hoặc CCN:
-             + Trường hợp Tên cụ thể (có số hiệu I, II, III...): Hãy giữ nguyên chính xác số hiệu. Ví dụ: User hỏi "VSIP I", keyword phải là "VSIP I".
-             + Trường hợp Thương hiệu chung: Nếu user chỉ nói tên gốc (VD: "VSIP", "Amata") mà KHÔNG kèm số hiệu, hãy trả về tên gốc đó để tìm tất cả các khu thuộc thương hiệu.
-             + Nếu so sánh nhiều khu: Trả về danh sách các tên (các khu công nghiệp/cụm công nghiệp chính xác).
-           - Trả về **chính xác tên** của khu công nghiệp hoặc cụm công nghiệp được yêu cầu mà không bao gồm thông tin không liên quan như tỉnh hoặc loại cụm (trừ khi có yêu cầu thêm).
+             + Nếu có số hiệu (VSIP I): Giữ nguyên "VSIP I".
+             + Nếu tên thương hiệu chung (VSIP): Giữ nguyên "VSIP".
         
-        4. "numeric_filters" (QUAN TRỌNG):
-           - "metric": 
-             + "price": Nếu câu hỏi liên quan đến GIÁ, TIỀN, USD.
-             + "area": Nếu câu hỏi liên quan đến DIỆN TÍCH, RỘNG, QUY MÔ, HA, HECTA.
-           - "operator": ">" (lớn hơn, trên), "<" (nhỏ hơn, dưới), "=" (bằng), ">=" (từ), "<=" (đến).
+        4. "visualization_metric" (QUAN TRỌNG - Xác định loại biểu đồ):
+           - "price": Nếu user hỏi cụ thể về GIÁ, TIỀN, USD, THUÊ.
+           - "area": Nếu user hỏi cụ thể về DIỆN TÍCH, RỘNG, QUY MÔ, HA.
+           - "dual": Nếu user hỏi CHUNG CHUNG (VD: "vẽ biểu đồ KCN A", "thông tin KCN B", "so sánh KCN A và B") mà KHÔNG nhắc rõ giá hay diện tích. Hoặc nhắc đến CẢ HAI.
+        
+        5. "numeric_filters":
+           - Điều kiện so sánh số học (lớn hơn, nhỏ hơn...).
+           - "metric": "price" hoặc "area".
+           - "operator": ">", "<", "=", ">=", "<=".
            - "value": Số thực.
-           
-           Ví dụ: 
-           - "lớn hơn 100 ha" -> metric: "area", value: 100.
-           - "giá dưới 50 USD" -> metric: "price", value: 50.
         
         OUTPUT JSON:
         {{
             "target_type": "...",
             "filter_type": "province" | "specific_zones",
             "search_keywords": ["..."],
-            "numeric_filters": [
-                {{"metric": "area", "operator": ">", "value": 100}}
-            ]
+            "visualization_metric": "price" | "area" | "dual",
+            "numeric_filters": []
         }}
         """
 
@@ -154,7 +150,12 @@ class ExcelQueryAgent:
             llm_result = chain.invoke({"query": user_query, "provinces_list": provinces_str})
             
             target_type = llm_result.get("target_type", "Khu công nghiệp")
-            filter_type = llm_result.get("filter_type", "specific_zones") 
+            filter_type = llm_result.get("filter_type", "specific_zones")
+            
+            # Mặc định là 'dual' nếu LLM không trả về hoặc không chắc chắn, 
+            # để đảm bảo cung cấp nhiều thông tin nhất cho câu hỏi chung.
+            visualization_metric = llm_result.get("visualization_metric", "dual")
+            
             keywords = llm_result.get("search_keywords", [])
             numeric_filters = llm_result.get("numeric_filters", [])
             
@@ -176,13 +177,9 @@ class ExcelQueryAgent:
                 elif filter_type == "specific_zones":
                     masks = []
                     for kw in keywords:
-                        # Regex boundary để tránh match nhầm (VSIP I vs VSIP III)
                         try:
                             if len(kw) >= 3: 
                                 pattern = r"\b" + re.escape(kw.lower())
-                                # Chỉ dùng boundary đầu (\bKW) để cho phép biến thể phía sau 
-                                # nếu user nói tên thương hiệu (VD: VSIP -> VSIP I, VSIP II)
-                                # Nhưng prompt đã xử lý việc trích xuất tên chính xác.
                                 m = df_filtered["Tên_norm"].str.contains(kw.lower(), regex=False, na=False)
                             else:
                                 m = df_filtered["Tên_norm"].str.contains(kw.lower(), regex=False, na=False)
@@ -194,7 +191,7 @@ class ExcelQueryAgent:
                         final_mask = pd.concat(masks, axis=1).any(axis=1)
                         df_filtered = df_filtered[final_mask]
 
-            # 3. Lọc Số (Hỗ trợ cả Price và Area)
+            # 3. Lọc Số
             for f in numeric_filters:
                 metric = f.get("metric")
                 op = f.get("operator")
@@ -216,6 +213,7 @@ class ExcelQueryAgent:
             final_result = {
                 "industrial_type": target_type,
                 "filter_type": filter_type,
+                "visualization_metric": visualization_metric, # TRẢ VỀ METRIC ĐỂ HANDLER XỬ LÝ
                 "data": df_filtered
             }
             return final_result
