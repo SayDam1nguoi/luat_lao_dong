@@ -90,7 +90,7 @@ class ExcelQueryAgent:
 
     def retrieve_filters(self, user_query: str) -> Dict[str, Any]:
         """
-        Phân tích câu hỏi nâng cao: Hỗ trợ Giá, Diện tích, và BIỂU ĐỒ ĐÔI (Dual).
+        Phân tích câu hỏi: Xác định Loại biểu đồ (Giá/Diện tích/Dual) VÀ Dạng biểu đồ (Tròn/Đường/Cột).
         """
         if self.df.empty:
              return {"filter_type": "error", "message": "Chưa load được dữ liệu Excel."}
@@ -104,7 +104,7 @@ class ExcelQueryAgent:
         DANH SÁCH TỈNH: [{provinces_list}]
         CÂU HỎI: "{query}"
         
-        NHIỆM VỤ: Trích xuất JSON điều kiện lọc và LOẠI BIỂU ĐỒ.
+        NHIỆM VỤ: Trích xuất JSON điều kiện lọc, DỮ LIỆU CẦN VẼ và DẠNG BIỂU ĐỒ.
         
         1. "target_type": "Khu công nghiệp" hoặc "Cụm công nghiệp".
         
@@ -118,13 +118,18 @@ class ExcelQueryAgent:
              + Nếu có số hiệu (VSIP I): Giữ nguyên "VSIP I".
              + Nếu tên thương hiệu chung (VSIP): Giữ nguyên "VSIP".
         
-        4. "visualization_metric" (QUAN TRỌNG - Xác định loại biểu đồ):
+        4. "visualization_metric" (DỮ LIỆU CẦN VẼ):
            - "price": Nếu user hỏi cụ thể về GIÁ, TIỀN, USD, THUÊ.
            - "area": Nếu user hỏi cụ thể về DIỆN TÍCH, RỘNG, QUY MÔ, HA.
            - "dual": Nếu user hỏi CHUNG CHUNG (VD: "vẽ biểu đồ KCN A", "thông tin KCN B", "so sánh KCN A và B") mà KHÔNG nhắc rõ giá hay diện tích. Hoặc nhắc đến CẢ HAI.
         
-        5. "numeric_filters":
-           - Điều kiện so sánh số học (lớn hơn, nhỏ hơn...).
+        5. "chart_type" (DẠNG BIỂU ĐỒ - MỚI):
+           - "bar": Mặc định (nếu không nói gì), hoặc user nói "biểu đồ cột".
+           - "barh": Nếu user nói "cột ngang", "thanh ngang".
+           - "pie": Nếu user nói "biểu đồ tròn", "cơ cấu", "tỷ lệ", "bánh".
+           - "line": Nếu user nói "biểu đồ đường", "xu hướng", "biến thiên".
+        
+        6. "numeric_filters":
            - "metric": "price" hoặc "area".
            - "operator": ">", "<", "=", ">=", "<=".
            - "value": Số thực.
@@ -135,6 +140,7 @@ class ExcelQueryAgent:
             "filter_type": "province" | "specific_zones",
             "search_keywords": ["..."],
             "visualization_metric": "price" | "area" | "dual",
+            "chart_type": "bar" | "barh" | "pie" | "line",
             "numeric_filters": []
         }}
         """
@@ -152,9 +158,11 @@ class ExcelQueryAgent:
             target_type = llm_result.get("target_type", "Khu công nghiệp")
             filter_type = llm_result.get("filter_type", "specific_zones")
             
-            # Mặc định là 'dual' nếu LLM không trả về hoặc không chắc chắn, 
-            # để đảm bảo cung cấp nhiều thông tin nhất cho câu hỏi chung.
+            # Logic: Mặc định là 'dual' nếu chung chung
             visualization_metric = llm_result.get("visualization_metric", "dual")
+            
+            # Logic: Mặc định là 'bar' nếu không nói rõ dạng biểu đồ
+            chart_type = llm_result.get("chart_type", "bar")
             
             keywords = llm_result.get("search_keywords", [])
             numeric_filters = llm_result.get("numeric_filters", [])
@@ -213,7 +221,8 @@ class ExcelQueryAgent:
             final_result = {
                 "industrial_type": target_type,
                 "filter_type": filter_type,
-                "visualization_metric": visualization_metric, # TRẢ VỀ METRIC ĐỂ HANDLER XỬ LÝ
+                "visualization_metric": visualization_metric, # Giá/Diện tích/Dual
+                "chart_type": chart_type,                     # Bar/Line/Pie/Barh
                 "data": df_filtered
             }
             return final_result

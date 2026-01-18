@@ -69,6 +69,85 @@ def _plot_base64(fig) -> str:
     plt.close(fig)
     return base64_str
 
+def plot_horizontal_bar_chart(df: pd.DataFrame, title_str: str, col_name: str, color: str, unit: str) -> str:
+    """Vẽ biểu đồ cột ngang"""
+    df_sorted = df.sort_values(by=col_name, ascending=True).tail(15) 
+    names = df_sorted["Tên"].apply(_clean_name_for_label).tolist()
+    values = df_sorted[col_name].tolist()
+
+    fig, ax = plt.subplots(figsize=(14, 9))
+    bars = ax.barh(names, values, color=color, height=0.6, zorder=3)
+    ax.grid(axis='x', linestyle='--', alpha=0.5, zorder=0)
+    
+    ax.set_xlabel(unit, fontsize=13, fontweight='bold')
+    ax.set_title(title_str, fontsize=18, fontweight='bold', pad=20, color='#333333')
+    
+    for bar in bars:
+        width = bar.get_width()
+        ax.annotate(f'{width:.1f}', 
+                    xy=(width, bar.get_y() + bar.get_height()/2),
+                    xytext=(5, 0), textcoords="offset points",
+                    ha='left', va='center', fontweight='bold', fontsize=10)
+    
+    plt.subplots_adjust(top=0.85, bottom=0.1, left=0.25, right=0.85)
+    _add_branding(fig)
+    return _plot_base64(fig)
+
+def plot_pie_chart(df: pd.DataFrame, title_str: str, col_name: str, unit: str) -> str:
+    """Vẽ biểu đồ tròn (Lấy top 10, còn lại gom vào 'Khác')"""
+    df_sorted = df.sort_values(by=col_name, ascending=False)
+    
+    if len(df_sorted) > 10:
+        top_10 = df_sorted.head(10).copy()
+        others_val = df_sorted.iloc[10:][col_name].sum()
+        other_row = pd.DataFrame([{"Tên": "Khu vực khác", col_name: others_val}])
+        df_plot = pd.concat([top_10, other_row], ignore_index=True)
+    else:
+        df_plot = df_sorted
+
+    names = df_plot["Tên"].apply(_clean_name_for_label).tolist()
+    values = df_plot[col_name].tolist()
+    
+    fig, ax = plt.subplots(figsize=(14, 9))
+    
+    wedges, texts, autotexts = ax.pie(values, labels=names, autopct='%1.1f%%', 
+                                      startangle=90, counterclock=False, 
+                                      textprops={'fontsize': 10}, pctdistance=0.85)
+    
+    # Tạo vòng tròn trắng ở giữa để thành Donut Chart cho đẹp
+    centre_circle = plt.Circle((0,0),0.70,fc='white')
+    fig.gca().add_artist(centre_circle)
+
+    ax.set_title(title_str, fontsize=18, fontweight='bold', pad=30, color='#333333')
+    plt.setp(autotexts, size=9, weight="bold", color="black")
+    
+    plt.subplots_adjust(top=0.85, bottom=0.1, left=0.1, right=0.9)
+    _add_branding(fig)
+    return _plot_base64(fig)
+
+def plot_line_chart(df: pd.DataFrame, title_str: str, col_name: str, color: str, unit: str) -> str:
+    """Vẽ biểu đồ đường"""
+    df_sorted = df.sort_values(by=col_name, ascending=False).head(15)
+    names = df_sorted["Tên"].apply(_clean_name_for_label).tolist()
+    values = df_sorted[col_name].tolist()
+
+    fig, ax = plt.subplots(figsize=(14, 9))
+    
+    ax.plot(names, values, marker='o', linestyle='-', color=color, linewidth=3, markersize=10, zorder=3)
+    ax.grid(True, linestyle='--', alpha=0.5, zorder=0)
+    
+    ax.set_ylabel(unit, fontsize=13, fontweight='bold')
+    ax.set_title(title_str, fontsize=18, fontweight='bold', pad=30, color='#333333')
+    
+    ax.set_xticklabels(names, rotation=90, ha='center', fontsize=11)
+
+    for i, txt in enumerate(values):
+        ax.annotate(f"{txt:.1f}", (names[i], values[i]), xytext=(0, 10), 
+                    textcoords='offset points', ha='center', fontweight='bold', fontsize=10)
+
+    plt.subplots_adjust(top=0.85, bottom=0.30, left=0.1, right=0.85)
+    _add_branding(fig)
+    return _plot_base64(fig)
 # 1. BIỂU ĐỒ GIÁ
 def plot_price_bar_chart_base64(df: pd.DataFrame, title_location: str, industrial_type: str) -> str:
     df_sorted = df.sort_values(by="Giá số", ascending=False).head(15)
