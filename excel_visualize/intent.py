@@ -4,7 +4,7 @@ def is_excel_visualize_intent(message: str) -> bool:
     """Kiểm tra user có muốn xem biểu đồ/dữ liệu Excel không"""
     keywords = [
         "biểu đồ", "so sánh", "visualize", "trực quan", "chart", 
-        "giá đất", "diện tích", "quy mô"
+        "giá đất", "diện tích", "quy mô","tròn", "cột", "đường", "xu hướng", "cơ cấu", "tỷ lệ"
     ]
     msg = message.lower()
     return any(k in msg for k in keywords)
