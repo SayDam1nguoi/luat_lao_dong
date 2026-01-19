@@ -9,6 +9,7 @@ from datetime import datetime
 # ================= CẤU HÌNH =================
 plt.rcParams['font.sans-serif'] = ['Arial', 'DejaVu Sans', 'Liberation Sans', 'sans-serif']
 
+# CẤU HÌNH ĐƯỜNG DẪN TUYỆT ĐỐI
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
 LOGO_PATH = os.path.join(CURRENT_DIR, "assets", "company_logos.png")
 QR_PATH = os.path.join(CURRENT_DIR, "assets", "chatiip.png")
@@ -54,22 +55,18 @@ def _plot_base64(fig) -> str:
     return base64_str
 
 # =========================================================
-# HELPER: TẠO SỐ THỨ TỰ KHOANH TRÒN (❶ Tên...)
+# HELPER: ĐỊNH DẠNG SỐ THỨ TỰ
 # =========================================================
 def _convert_to_circled_num(i: int) -> str:
-    """Chuyển số nguyên i (bắt đầu từ 1) thành ký tự khoanh tròn Unicode"""
-    # 1-10: ❶..❿ (U+2776 - U+277F)
-    if 1 <= i <= 10:
-        return chr(0x2776 + i - 1)
-    # 11-20: ⓫..⓴ (U+24EB - U+24F4)
-    elif 11 <= i <= 20:
-        return chr(0x24EB + i - 11)
-    # >20: Dùng (n)
-    else:
-        return f"({i})"
+    """
+    Sửa lại: Dùng định dạng (1), (2)... thống nhất cho tất cả.
+    Vì font unicode khoanh tròn chỉ hỗ trợ đến số 20, nên dùng format này
+    để danh sách dài không bị lỗi hiển thị.
+    """
+    return f"({i})"
 
 def _get_circled_names(df: pd.DataFrame) -> list:
-    """Trả về danh sách tên có kèm số khoanh tròn: ❶ Tên A, ❷ Tên B..."""
+    """Trả về danh sách tên có kèm số thứ tự: (1) Tên A, (2) Tên B..."""
     raw_names = df["Tên"].apply(_clean_name_for_label).tolist()
     circled_names = []
     for i, name in enumerate(raw_names):
@@ -78,20 +75,21 @@ def _get_circled_names(df: pd.DataFrame) -> list:
     return circled_names
 
 # =========================================================
-# CÁC HÀM VẼ (ĐÃ UPDATE STYLE MỚI)
+# CÁC HÀM VẼ (GIỮ NGUYÊN LOGIC VẼ FULL)
 # =========================================================
 
 def plot_horizontal_bar_chart(df: pd.DataFrame, title_str: str, col_name: str, color: str, unit: str) -> str:
-    # Barh vẽ từ dưới lên, cần đảo ngược để số 1 nằm trên cùng
+    # Barh vẽ từ dưới lên, đảo ngược để số 1 ở trên cùng
     df_reversed = df.iloc[::-1]
     
-    # Tạo tên có số trước khi đảo ngược để khớp index
-    names_desc = _get_circled_names(df) # [❶ Max, ❷ 2nd...]
-    names_asc = names_desc[::-1]       # [Min, ..., ❶ Max]
+    # Tạo tên có số trước khi đảo ngược
+    names_desc = _get_circled_names(df) 
+    names_asc = names_desc[::-1]       
     
     values = df_reversed[col_name].tolist()
     num_items = len(values)
 
+    # Tự động tăng chiều cao ảnh
     fig_height = max(9, num_items * 0.5)
     fig, ax = plt.subplots(figsize=(14, fig_height))
     
@@ -175,7 +173,6 @@ def plot_price_bar_chart_base64(df: pd.DataFrame, title_location: str, industria
     
     ax.set_xticklabels(names, rotation=90, ha='center', fontsize=10)
     
-    # Chỉ hiển thị giá trị, KHÔNG vẽ vòng tròn đè lên nữa (vì đã có ở tên trục)
     for bar in bars:
         height = bar.get_height()
         ax.annotate(f'{height:.1f}',
@@ -247,7 +244,7 @@ def plot_dual_bar_chart_base64(df: pd.DataFrame, title_location: str, industrial
             ax1.annotate(f'{bar.get_height():.0f}',
                          xy=(bar.get_x() + bar.get_width() / 2, bar.get_height()),
                          xytext=(0, 3), textcoords="offset points",
-                         ha='center', va='bottom', fontsize=8, color='#1f77b4', fontweight='bold')
+                         ha='center', va='bottom', fontsize=9, color='#1f77b4', fontweight='bold')
             
     for bar in bars2:
         if bar.get_height() > 0:
