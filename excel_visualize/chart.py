@@ -9,21 +9,23 @@ from datetime import datetime
 # ================= CẤU HÌNH =================
 plt.rcParams['font.sans-serif'] = ['Arial', 'DejaVu Sans', 'Liberation Sans', 'sans-serif']
 
-# --- FIX ĐƯỜNG DẪN TUYỆT ĐỐI ---
-# 1. Lấy vị trí của file chart.py hiện tại (.../project/excel_visualize)
+# --- CẤU HÌNH ĐƯỜNG DẪN (ĐÃ SỬA THEO ẢNH BẠN GỬI) ---
+# 1. Lấy vị trí của file chart.py hiện tại
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
-# 2. Lấy thư mục gốc dự án (project) bằng cách đi ngược ra 1 cấp
-PROJECT_ROOT = os.path.dirname(CURRENT_DIR)
-# 3. Nối vào folder assets
-LOGO_PATH = os.path.join(PROJECT_ROOT, "assets", "company_logos.png")
-QR_PATH = os.path.join(PROJECT_ROOT, "assets", "chatiip.png")
 
-# Debug: In ra để kiểm tra xem code tìm thấy file chưa
-print(f"Checking Logo Path: {LOGO_PATH} -> Exists: {os.path.exists(LOGO_PATH)}")
+# 2. Folder 'assets' nằm NGAY BÊN TRONG folder chứa chart.py
+# (Không dùng dirname để nhảy ra ngoài nữa)
+LOGO_PATH = os.path.join(CURRENT_DIR, "assets", "company_logos.png")
+QR_PATH = os.path.join(CURRENT_DIR, "assets", "chatiip.png")
+
+# Debug: In ra để bạn yên tâm
+print(f"--- DEBUG PATH ---")
+print(f"File chart.py đang ở: {CURRENT_DIR}")
+print(f"Đang tìm Logo tại:    {LOGO_PATH}")
+print(f"-> Có tồn tại không?  {os.path.exists(LOGO_PATH)}")
 # ============================================
 
 def _clean_name_for_label(name: str) -> str:
-    """Làm ngắn tên KCN để hiển thị trục X cho đẹp"""
     s = str(name)
     for prefix in ["Khu công nghiệp", "Cụm công nghiệp", "KCN", "CCN", "Khu CN", "Cụm CN"]:
         if s.lower().startswith(prefix.lower()):
@@ -35,7 +37,6 @@ def _clean_name_for_label(name: str) -> str:
     return s
 
 def _get_footer_text() -> str:
-    """Tạo dòng chữ chân trang với thời gian thực"""
     now = datetime.now()
     time_str = now.strftime("%H:%M ngày %d/%m/%Y")
     return f"Biểu đồ được tạo bởi ChatIIP.com vào lúc {time_str}. Dữ liệu từ IIPMAP.com"
@@ -51,10 +52,9 @@ def _add_branding(fig):
             logo_ax.imshow(img_logo)
             logo_ax.axis('off')
         except Exception as e:
-            print(f"⚠️ Warning: Lỗi khi đọc file Logo: {e}")
+            print(f"⚠️ Warning: Lỗi load Logo: {e}")
     else:
-        # Bổ sung thông báo nếu không tìm thấy file
-        print(f"❌ Error: Không tìm thấy file Logo tại: {LOGO_PATH}")
+        print(f"❌ KHÔNG TÌM THẤY LOGO TẠI: {LOGO_PATH}")
 
     # 2. Thêm QR (Góc dưới bên phải)
     if os.path.exists(QR_PATH):
@@ -65,9 +65,9 @@ def _add_branding(fig):
             qr_ax.imshow(img_qr)
             qr_ax.axis('off')
         except Exception as e:
-            print(f"⚠️ Warning: Lỗi khi đọc file QR: {e}")
+            print(f"⚠️ Warning: Lỗi load QR: {e}")
     else:
-        print(f"❌ Error: Không tìm thấy file QR tại: {QR_PATH}")
+        print(f"❌ KHÔNG TÌM THẤY QR TẠI: {QR_PATH}")
 
 def _plot_base64(fig) -> str:
     """Helper chuyển Matplotlib Figure sang Base64 string"""
@@ -82,7 +82,7 @@ def _plot_base64(fig) -> str:
     return base64_str
 
 # ==========================================
-# CÁC HÀM VẼ (BAR, BARH, PIE, LINE, DUAL)
+# CÁC HÀM VẼ (Copy phần thân hàm từ file trước, không cần sửa gì ở dưới này)
 # ==========================================
 
 def plot_horizontal_bar_chart(df: pd.DataFrame, title_str: str, col_name: str, color: str, unit: str) -> str:
@@ -252,7 +252,6 @@ def plot_dual_bar_chart_base64(df: pd.DataFrame, title_location: str, industrial
                          xy=(bar.get_x() + bar.get_width() / 2, bar.get_height()),
                          xytext=(0, 3), textcoords="offset points",
                          ha='center', va='bottom', fontsize=9, color='#1f77b4', fontweight='bold')
-    
     for bar in bars2:
         if bar.get_height() > 0:
             ax2.annotate(f'{int(bar.get_height())}',
