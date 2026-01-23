@@ -1,0 +1,302 @@
+[
+  {
+    "chunk_id": 1,
+    "chapter": "INTRO",
+    "section": null,
+    "title": "MỞ ĐẦU",
+    "semantic_block": "introduction_full",
+    "formulas": [],
+    "formula_objects": [],
+    "token_count": 5424,
+    "content": "BỘ GIÁO DỤC VÀ KHOA HỌC LIÊN BANG NGA LUẬN ÁN TIẾN SĨ KỸ THUẬT CHUYÊN NGÀNH ĐỀ TÀI: NGHIÊN CỨU HOÀN THIỆN ĐIỀU KHIỂN LÁI MÁY SAN VỚI KHỚP NỐI ĐỘNG Tác giả: Nhóm tác giả Chuyên ngành 05.05.03 – “máy làm đường, máy công trình và máy nâng vận chuyển”. Cán bộ hướng dẫn: Tập thể cán bộ hướng dẫn. LỜI NÓI ĐẦU Tính cấp thiết của đề tài Khả năng cơ động của máy san – là khả năng thực hiện quay vòng xe với bán kính nhỏ nhất – một trong các tham số quyết định tính cạnh tranh của xe trên thương trường thế giới [123]. Máy đào đất phải làm việc trong điều kiện không gian chật hẹp chính vì vậy cản trở khả năng cơ động của nó. Ngoài các thao tác làm việc chính máy đào đất thường phải di chuyển tham gia giao thông. Vận tốc của các phương tiện đào đất thấp hơn của các phương tiện tham gia giao thông khác. Một trong các nguyên nhân khiến cho bán kính quay vòng của xe rất lớn là do chiều dài cơ sở của xe có thể đạt 4-7,5 m. Khi đó các bánh lốp phía sau của máy đào đất dịch chuyển theo bán kính nhỏ hơn so với các bánh còn lại, kết quả là vệt quay vòng tăng tạo khó khăn cho việc thực hiện quay vòng. Khái niệm vệt quay vòng rộng (S k , m) được hiểu là chiều rộng bề mặt tựa giới hạn bởi hình chiếu các điểm lồi ra của toàn xe trên quỹ đạo chuyển động của nó [31, 51]. Phần lớn các mô hình máy đào đất trong nước và nước ngoài sản xuất có khớp nối động cấu tạo gồm khung chính và khung lắp động cơ liên kết với nhau bằng bản lề dựng đứng bố trí gần với trục của thanh cân bằng [127, 143]. Khớp nối động giúp làm tăng cơ động của máy đào đất khi thực hiện các thao tác ở chế độ công tác và chế độ di chuyển tham gia giao thông. Kết cấu kiểu này giúp làm giảm 1,5…2 lần bán kính quay vòng xe và làm cho các bánh phía trước dịch chuyển tương đối với các bánh cân bằng ở khoảng cách 2m (chuyển động kiểu con Cua) để làm tăng độ ổn định của xe khi đi nghiêng [127]. Thực trạng thiết kế hiện nay chưa quan tâm đúng mức trong việc đưa ra các đặc điểm kết cấu để làm giảm bán kính quay vòng, nhằm làm tăng khả năng cơ động của xe. Sự đồng bộ các góc quay vòng của các bánh dẫn hướng phía trước và góc kết hợp các khau do khớp nối động tạ ra là rất khó khăn do khớp nối động chỉ để đảm bảo thực hiện các thao tác đào đất và được điều khiển riêng bằng cần điều khiển lái. Việc tạo ra góc quay vòng của các bánh lái phía trước trùng với góc giữa các khâu do khớp nối động tạo ra cho phép nâng cao khả năng cơ động của máy đào đất và đảm bảo chuyển động các bánh phía trước và phía sau theo một vệt khi cần thiết để làm giảm kích thước vệt quay vòng và khi tham gia giao thông. Ngoài ra khi làm việc trên công trường xây dựng các máy đào đất dạng này sẽ có ưu điểm cho phép giảm bán kính quay vòng và thời gian thoát ra để đi thẳng. Chính vì các yếu tố trình bày ở trên nên việc nghiên cứu hoàn thiện điều khiển lái máy đào đất với khớp nối động là vấn đề mang tính thời sự, giải quyết được vấn đề này cho phép các bánh phía trước và phía sau cùng chuyển động trên một vệt ở chế độ di chuyển tham gia giao thông và giảm bán kính quay vòng khi làm việc ở chế độ công tác. Các công trình nghiên cứu có liên quan . Có thể kể đến các nhà khoa học như: V.N. Arkhangelsky, V.V. Belyaeva, N.V. Belyaeva, I.V. Boyarkina, V.M. Goldstein, V.E. Kalugina, V.I. Kolyakina, I.I. Matyasha, E.E. Nemirovsky, E.V. Popova, V.V. Privalova, E.A. Stepanova, E.I. Tolstopyatenko, K.K. Shestopalova, V.S. Shcherbakova và một số nhà khoa học khác đã tham gia nghiên cứu hoàn thiện kết cấu của xe cơ sở. Nhiều nhà nghiên cứu xác định lực cản đào đất của máy xúc như K.A. Artemyev, V.I. Balovnev, Yu.A. Vetrovu, V.P. Goryachkin, N.G. Dombrovsky, A.N. Zelenin, I.A. Nedorezovu đã có những công trình nghiên cứu sâu về lý thuyết đào đất. Về vấn đề dẫn động thủy lực khớp nối động các máy đào đất và cả máy san đã được trình bày trong nhiều công trình của các tác giả như Alekseeva, V.A. Baikalov, E.Yu.Malinovsky và trong nhiều nghiên cứu khác. Các công trình này đều đi theo hướng nâng cao tính năng động lực học dẫn động thủy lực của các cần điều khiển và tay lái. Nhiều nhà khoa học nghiên cứu quá trình làm việc của máy đào đất trang bị các hệ thống lái như: V.F. Amelchenko, M.A. Akhmedzhanov, A.M. Vaskovsky, V.S. Degtyarev, Yu.M. Knyazhev, B.D. Kononogov, E.N. Kuzin, A.N. Pikovskaya, V.N. Tarasov, S.T. Shchukerman, V.N. Chentsov, S.S. Shchedrovitsky, V.S. Shcherbakov v.v. Vấn đề tương tác bánh lốp với đất được các nhà nghiên cứu quan tâm có thể kể đến như: Yu.A. Bryanskiy, G.I. Gladov, V.V. Larin, A.S. Litvinov, E.D. Lviv, K.Yu. Mashkov, F.A. Opeiko, V.A. Petrushov, V.V. Redchits, Yu.L. Giáng sinh, G.A. Smirnov, H.T. Turaev, Ya.E. Farobin, D.A. Chudakov, E.A. Chudakov v.v. Chủ đề nghiên cứu Quá trình quay vòng của máy đào đất trang bị khớp nối động. Đối tượng nghiên cứu – Các quy luật quá trình quay vòng của máy đào đất có trang bị khớp nối động. Mục đích nghiên cứu – Nâng cao khả năng cơ động linh hoạt của máy đào đất trang bị khớp nối động để đảm bảo các bánh lốp phía trước và phía sau di chuyển cùng một vệt bằng cách hoàn thiện dẫn động điều khiển lái máy đào đất. Nhiệm vụ nghiên cứu : 1. Xây dựng mô hình toán học hệ thống động học phức tạp quá trình quay vòng máy đào đất với khớp nối động. 2. Tổng hợp biện giải các tiêu chí hiệu suất quá trình quay vòng máy đào đất trang bị khớp động. 3. Xây dựng phương pháp tối ưu hóa vị trí khớp nối động máy đào đất để đảm bảo các bánh phía trước và phía sau chuyển động trên cùng một vệt. 4. Làm rõ các quy luật quá trình quay vòng máy đào đất trang bị khớp nối động để đảm bảo các bánh trước và sau chuyển động cùng một vệt. 5. Đưa ra kiến nghị các giải pháp kỹ thuật đối với điều khiển lái máy đào đất. Tính mới của công trình nghiên cứu . Xây dựng mô hình toán hệ động học máy đào đất với khớp nối động cho phép xác định vị trí tối ưu của bản lề trên khung của máy đào đất, hệ số tỉ lệ giữa góc quay vòng bánh lái phía trước và góc giữa khâu trước và khâu sau sao cho đảm bảo các bánh phía trước và phía sau di chuyển trên cùng một vệt. Làm rõ quy luật xác định sự phụ thuộc góc giữa hai khâu vào góc quay vòng bánh lái phía trước và hiệu suất cơ sở máy đào đất ; sự phụ thuộc bán kính quay vòng vào góc quay vòng bánh lái phía trước và hệ số cơ sở máy đào đất trong điều kiện bánh trước và bánh sau chuyển động cùng một vệt. Làm rõ các quy luật xác định sự phụ thuộc góc quay vòng giữa hai khâu và góc quay vòng các bánh lái phía trước và hiệu suất cơ sở của máy san; bán kính quay vòng so với góc quay vòng của các bánh lái phía trước và hiệu suất cơ sở của máy san trong điều kiện chuyển động của bánh phía trước và phía sau cùng một vệt. Xây dựng phương pháp tính toán các tham số kết cấu cơ bản của máy san có khớp nối động và thuật toán mô hình hóa quá trình trình chuyển động của máy san theo bán kính đường tròn có dùng để tính toán cho các máy làm đường khác có sử dụng khớp nối động. Ý nghĩa lý thuyết và thực tế của đề tài . Sử dụng các kết quả thu được khi tính toán thiết kế máy san có khớp nối động cho phép giảm bớt thời gian thiết kế máy san có khớp nối động, nâng cao tính cơ động cho máy trong điều kiện làm việc không gian hẹp. Các phương pháp và thuật toán đề xuất đã được ứng dụng trong nhà máy chế tạo máy công nghiệp tại thành phố OMSK. Nội dung công trình đa được cấp bằng phát minh của Bộ giáo dục và khoa học Liên bang Nga và được phép ứng dụng rộng rãi trong toàn quốc để thiết kế máy san có khớp nối động. Các kết quả nghiên cứu của đề tài cũng được dùng trong giảng dạy tại Học viện giao thông đường bộ quốc gia Siberskyi ở cả ba bậc đại học, thạc sĩ và tiến sĩ về chuyên ngành “ Các phương tiện vận tải đường bộ” và “Các phương tiện chuyên dụng vận tải đường bộ”. Phương pháp nghiên cứu. Khi thực hiện luận văn đã sử dụng phương pháp luận phân tích hệ thống: phân tích cơ sở lý thuyết, xây dựng mô hình mô phỏng trên máy tính và thực nghiệm; xây dựng các mô hình toán lý, phân tích hồi quy. Sử dụng các phần mềm mô phỏng tính toán MATLAP – SIMULINK và STATISTICA. Các nội dung bảo vệ trước hội đồng : 1. Mô hình toán hệ động học phức tạp quá trình quay vòng máy san có khớp nối động. 2. Thuật toán mô hình hóa quá trình chuyển động máy san có khớp nối động theo đường tròn. 3. Các kết quả nghiên cứu lý thuyết mô hình toán quá trình quay vòng máy san có khớp nối động. 4. Kết cấu máy san có khớp nối động đảm bảo nâng cao khả năng cơ động và giảm bớt bán kính quay vòng của máy san có khớp nối động. 5. Hai sơ đồ điều khiển lái bằng điện thủy lực của máy san có sử dụng khớp nối động. Mức độ tin cậy của các luận chứng khoa học . Các mô hình toán học thể hiện các phân tích lý thuyết và thực tế, sử dụng các giả thiết đảm bảo giải bài toán với độ chính xác kỹ thuật cao, sử dụng các phương pháp đúng đắn để xây dựng các mô hình toán học, dữ liệu thực nghiệm đầy đủ. Thảo luận các kết quả nghiên cứu . Các kết quả nghiên cứu chính của công trình đã được trình bày và thảo luận tại: Hội thảo khoa học và công nghệ quốc tế lần thứ 7 giành cho nghiên cứu sinh, sinh viên và các nhà khoa học trẻ tổ chức tại Đại học giao thông đường bộ OMSK; Các Hội thảo Khoa học Quốc tế lần thứ 13, 14, 15, 16 tổ chức tại Trường Đại học Tổng hợp Kỹ thuật Bauman chi nhánh tại thành phố OMSK các năm 2012, 2013, 2014, 2015; Hội thảo khoa học Quốc tế toàn Liên bang Nga “Xu hướng nghiên cứu khoa học ứng dụng cơ bản – cơ sở mô hình hóa và phát triển tổ hợp giao thông đường bộ và kiến trúc xây dựng” tổ chức tại Đại học Tổng hợp Kỹ thuật Bauman chi nhánh Syberya 2012; Hội thảo khoa học liên trường vùng OMSK dành cho sinh viên và nghiên cứu sinh với chủ đề “Nguồn nhân lực tri thức” tổ chức tại Trường Đại học Kỹ thuật Tổng hợp Quốc gia OMSK năm 2012, 2013; Hội thảo khoa học thực hành lần thứ 67 “Lý thuyết, phương pháp thiết kế chế tạo máy xây dựng” tổ chức tại Đại học Tổng hợp Quốc gia Bauman chi nhánh Syberyi, thành phố OMSK, năm 2013; Hội thảo khoa học quốc tế “Phát triển tổ hợp xe máy công trình và các phương tiện giao thông đường bộ” tổ chức tại Đại học tổng hợp Quốc gia Bauman chi nhánh Syberyi tại thành phố OMSK 2014; Hội thảo khoa học quốc tế giành cho sinh viên, nghiên cứu sinh và các nhà khoa học trẻ “Khoa học cơ bản ứng dụng – nền tảng hệ thống khoa học ứng dụng” tổ chức tại Đại học tổng hợp Quốc gia Bauman chi nhánh Syberyi tại thành phố OMSK, 2015. Ứng dụng các kết quả nghiên cứu của đề tài . Phương pháp tính toán các tham số kết cấu chính của máy san có khớp nối đượng ứng dụng tại nhà máy chế tạo máy công nghiệp tại thành phố OMSK. Các kết quả nghiên cứu của đề tài cũng được dùng trong giảng dạy tại Học viện giao thông đường bộ quốc gia Siberskyi. Các công trình đã công bố . Các kết quả nghiên cứu của công trình được trình bày trong 24 ấn phẩm, trong đó có 05 bài báo được đăng trên các tạp chí thuộc danh mục BAK của Bộ giáo dục và khoa học Liên bang Nga, 04 bằng sáng chế về các giải pháp hữu ích và một chứng chỉ sở hữu trí tuệ về phần mềm chuyên dụng do Bộ giáo dục và khoa học Liên bang Nga cấp. Cấu trúc và hàm lượng nội dung nghiên cứu của công trình . Luận văn gồm có 5 phần, các kết luận chung, danh mục tài liệu tham khảo (169 tài liệu tham khảo) và phần phụ lục. Luận văn được trình bày trong 191 trang, 81 hình vẽ, 20 bảng biểu, 10 phụ lục trình bày trong 13 trang."
+  },
+  {
+    "chunk_id": 2,
+    "chapter": "1",
+    "section": "1",
+    "title": "Chương 1 – Phân tích thực trạng vấn đề",
+    "semantic_block": "chapter_intro",
+    "formulas": [],
+    "formula_objects": [],
+    "token_count": 73,
+    "content": "1. PHÂN TÍCH THỰC TRẠNG VẤN ĐỀ. ĐỐI TƯỢNG NGHIÊN CỨU. MỤC TIÊU VÀ NHIỆM VỤ NGHIÊN CỨU ."
+  },
+  {
+    "chunk_id": 3,
+    "chapter": "1",
+    "section": "1.1",
+    "title": "1.1 Xu hướng phát triển máy san hiện nay",
+    "semantic_block": "background_review",
+    "formulas": [],
+    "formula_objects": [],
+    "token_count": 2431,
+    "content": "1.1 Xu hướng phát triển máy san hiện nay . Vấn đề nâng cao hiệu suất làm việc của máy san hiện nay được nhiều nhà khoa học quan tâm. Quá trình làm việc của máy san trang bị các hệ thống điều khiển đã được đề cập trong hàng loạt các công trình nghiên cứu trước đây [9, 11, 19, 20, 21, 64]. Tuy nhiên do cách đặt vấn đề nghiên cứu và mục tiêu nghiên cứu khác nhau nên các hệ thống con khác nhau được nghiên cứu ở các mức khác nhau. Có thể chia các nghiên cứu trước đây thành các hướng sau đây [155]: Nghiên cứu hoàn thiện xe cơ sở và các trang bị công tác và phần vận hành [22, 23, 24, 25]; Nghiên cứu nâng cao đặc tính động lực học dẫn động thủy lực của các cơ cấu chấp hành [32]; Nghiên cứu hoàn thiện các hệ thống điều khiển lái [17, 18, 37, 44, 61, 48]. Các tác giả nghiên cứu theo hướng hoàn thiện kết cấu xe cơ sở có thể kể đến như: L.A. Antipova, V.N. Arkhangelsky, V.V. Belyaeva, N.V. Belyaeva, I.V. Boyarkina, V.M. Goldstein, V.E. Kalugina, V.I. Kolyakina, I.I. Matyasha, E.E. Nemirovsky, E.V. Popova, V.V. Privalova, E.A. Stepanova, E.I. Tolstopyatenko, K.K.Shestopalova, V.S. Shcherbakova et al, được trình bày trong các công trình nghiên cứu [12, 14, 22, 23, 26, 36, 53, 58, 74, 82, 93, 114, 128, 133, 153, 164]. Các vấn đề dẫn động thủy lực xe công trình có khớp nối động được các tác giả T.V. Alekseeva, V.A. Baikalov, E.Yu. Malinovsky và một số tác giả khác giành nhiều quan tâm. Các nghiên cứu theo hướng nâng cao tính năng động lực học của dẫn động thủy lực các hệ thống thủy lực điều khiển có thể kể đến các tái giả như N.S. Galdin, Sh.K. Mukushev, A.V. Zhdanov v.v., được trình trong các công trình [9, 10, 17, 32, 72, 158, 159]. Quá trình công tác của máy đào đất được các tác giả giành sự quan tâm lớn có thể kể đến như M.A. Akhmedzhanov, A.M. Vaskovsky, V.S. Degtyarev, Yu.M. Knyazhev, B.D. Kononogov, E.N. Kuzin, A.N. Pikovskaya, V.N. Tarasov, S.T. Tsukerman, V.N. Chentsov, S.S. Shchedrovitsky, V.S. Shcherbakov v.v., thể hiện trong các công trình [11, 15, 28, 44, 57, 61, 64, 91, 131, 148, 150, 154, 164]. Kết cấu của máy đào đất thường xuyên được hoàn thiện với mục tiêu làm tăng hiệu quả sử dụng chúng. Khuynh hướng nghiên cứu phát triển máy đào đất mạnh nhất hiện nay là [47, 49]: Nâng cao năng suất hoạt động của máy đào đất bằng cách sử dụng hết công suất của động cơ [74]; Nâng cao công suất đơn vị và tính chất kéo –bám của máy đào đất [45]; Nâng cao vận tốc di chuyển và tính năng cơ động của máy đào đất với mục tiêu tăng công suất của chúng [19, 20, 58]; Hoàn thiện kết cấu dẫn động thủy lực [17, 18]; Nâng cao mức độ tự động hóa của máy san và các hệ thống dẫn động điều khiển nhờ áp dụng các hệ tự động và kỹ thuật vi mạch [6, 17, 18, 93, 132, 164]; Nghiên cứu hoàn thiện kết cấu của máy đào đất làm việc tại các vùng có địa hình khó khăn như vùng Bắc Cực, vùng Viễn Đông và vùng Syberyi [69]; Nâng cao tính vạn năng của máy đào đất nhờ sử dụng các hệ thống điều khiển đa dụng [19, 20, 129]; Thiết kế các kết cấu máy san mới, trong đó có các loại máy san sử dụng khớp nối động với mục tiêu nâng cao công suất hoạt động và tính cơ động của chúng [12, 14, 19, 20, 53, 58]. Mặc dù kết cấu của máy san đã được nghiên cứu hoàn thiện nhiều, tuy nhiên chúng vẫn bộc lộ những nhược điểm khó khắc phục. Các tham số và kích thước chính của các máy đào đất sản xuất tại Nga hiện nay đang tuân thủ tiêu chuẩn quốc gia ГОСТ 27535-87 (ISO 7134-85) [42]. Các tham số và kích thích chính của máy san bao gồm: khối lượng, công suất động cơ, các sơ đồ kết cấu và các tham số của các hệ thống điều khiển [155]. Nhiều công trình nghiên cứu xác định lực cản máy san khi đào đất. Công cụ toán học về lý thuyết đào đất đã được xây dựng phản ánh rõ mối quan hệ của phản lực đất đến các hệ thống điều khiển với các tính chất cơ – lý của đất, độ dày lớp đất đào và các tham số của các hệ thống điều khiển, cũng như cho biết rằng sự biến động phản lực mang tính ngẫu nhiên. Các tác giả K.A. Artemyev, V.I.14 Balovnev, Yu.A. Vetrovu, V.P. Goryachkin, N.G. Dombrovsky, A.N. Zelenin, I.A. Nedorezovu đã có những cống hiến lớn trong việc xây dựng lý thuyết cắt đất [13, 46, 55, 81]. Nhiều tác giả đã tiến hành nghiên cứu sự ảnh hưởng các tham số kết cấu của máy san, độ cứng của bánh lốp, các tính chất động lực học của dẫn động thủy lực cơ cấu lái lên khả năng cơ động của máy san [58, 63, 94, 95, 99, 100, 102, 104, 106, 112, 113, 162, 164], nhưng về tổng quát không chỉ ra ảnh hưởng của sự thay đổi của các tham số lên quỹ đạo chuyển động cong của máy san. Chính vì vậy làm nảy sinh nghiên cứu bổ sung về sự ảnh hưởng của các tham số kết cấu và các tham số động lực học khác của máy san và các quy luật của các quá trình công tác với mục tiêu giải các bài toán về hoàn thiện dẫn động điều khiển lái của máy san. Có thể kết luận rằng quá trình nghiên cứu hoàn thiện kết cấu của máy đào đất nói chung và các hệ dẫn động điều khiển lái được các nhà khoa học hết sức quan tâm. Các nghiên cứu nhằm mục tiêu nâng cao công suất và hiệu suất làm việc của máy đào đất."
+  },
+  {
+    "chunk_id": 4,
+    "chapter": "1",
+    "section": "1.2",
+    "title": "1.2 Chủ thể và đối tượng nghiên cứu",
+    "semantic_block": "research_scope",
+    "formulas": [
+      "(1.1)",
+      "(1.1)",
+      "(1.1)",
+      "(1.2)",
+      "(1.3)"
+    ],
+    "formula_objects": [
+      {
+        "id": "(1.1)",
+        "raw_text": ",",
+        "position": 10975
+      },
+      {
+        "id": "(1.1)",
+        "raw_text": "c",
+        "position": 11187
+      },
+      {
+        "id": "(1.1)",
+        "raw_text": "ng",
+        "position": 11632
+      },
+      {
+        "id": "(1.2)",
+        "raw_text": "i qua. (rad/m)",
+        "position": 12797
+      },
+      {
+        "id": "(1.3)",
+        "raw_text": "(rad/m)",
+        "position": 13053
+      }
+    ],
+    "token_count": 6208,
+    "content": "1.2 Chủ thể và đối tượng nghiên cứu Chủ thể nghiên cứu của công trình là quá trình quay vòng của máy san có khớp nối động . Đối tượng nghiên cứu là quy luật quá trình quay vòng máy san với khớp nối động. Phần lớn các máy đào đất bánh lốp có săm, trong đó có máy san có nguyên tắc chung khi đổi hướng chuyển động bằng cách quay vòng các bánh lốp phía trước và phía sau hoặc cả hai. Sự phát triển của máy đào đất hiện nay đặc trưng bởi sự khác biệt việc bố trí dẫn động thủy lực điều khiển lái. Việc lựa chọn các dạng bố trí dẫn động thủy lực điều khiển lái khác nhau ảnh hưởng rất lớn đến công suất và hiệu suất hoạt động của máy san [158]. 1.3 Nhiệm vụ tối ưu hóa bán kính quay vòng của máy san co khớp nối động . Rõ ràng máy san là một kiểu của máy đào đất có chiều dài cơ sở lớn, do vậy khi hoạt động trong điều kiện không gian giao thông của thành phố sẽ gặp khó khăn xác định. Bề rộng mặt đường phụ thuộc vào các tiêu chí của con đường và tuân theo tiêu chuẩn quốc gia ГОСТ 52398-2005 “Phân loại các loại đường ô tô”. Số lượng làn xe nhỏ nhất ở cả hai chiều chuyển động đối với đường có vận tốc cao là 04, đối vường đường phố có người ở là 02 [43, 124]. Số lượng các làn xe và chiều rộng của mỗi làn là cơ sở để tính toán quyết định chiều rộng của lòng đường, con phố. Làn xe là phần lòng đường mà trên đó các xe chuyển động cùng chiều nối tiếp nhau. Chiều rộng của làn xe quyết định kích thước của xe ô tô và khoảng cách giữa các xe chuyển động trên làn nhằm đảm bảo độ an toàn cho các xe tham gia giao thông [124]. Theo tiêu chuẩn quốc gia ГОСТ 52399-2005 “Các phần tử hình học của đường ô tô” chiều rộng của một làn xe đối với đường cao tốc là 3,75 m, đối với loại đường cấp IB – IV chiều rộng một làn xe là từ 3,0 đến 3,75 m, đối với đường dạng bình thông thường loại V – từ 4,5 m trở lên [43]. Chiều rộng kích thước hành lang quay vòng (làn quay vòng) [14] (S k , m), được hiểu là chiều rộng của bề mặt tựa giới hạn bởi các hình chiếu của các điểm lồi ra của máy san trên quỹ đạo chuyển động của nó [31] không vượt quá chiều rộng vệt hai bánh xe của máy san tạo ra, tức là cần đảm bảo quay vòng máy san với kích thước chiều rộng hành lang chuyển động các bánh lốp nhỏ nhất [103]. Theo tiêu chuẩn xây dựng số 2.07.01 -89 * “Quy hoạch xây dựng. Quy hoạch và xây dựng các khu định cư đô thị và nông thôn” các bán kính đường cong lòng đường tính theo mép vỉa hè và các làn phân chia cần không dưới [125]: Đối với các con phố chính và khu vực điều tiết giao thông – 8 m; Điểm đến – 5 m; Tại các điểm trung chuyển – 12 m. Khi tiến hành xây dựng lại và trong các điều kiện trật hẹp, các bánh kính đường cong lòng đường và các điểm điều tiết giao thông cho phép nhỏ hơn, nhưng không dưới 6 m, tại các điểm trung chuyển – 8 m [125]. Trên hình 1.1 trình bày các phương án khác nhau có thể quay vòng máy san bằng cách quay vòng các bánh lốp phía trước (a), quay khớp nối động (б) hoặc bằng cả hai cách cả bánh lốp phía trước và khớp nối động. Máy san có khả năng quay vòng với bán kính nhỏ nhất trong quá trình di chuyển tham gia giao thông và sự chuyển động của các bánh phía trước và phía sau theo cùng một vệt là yếu tố rất quan trọng để đảm bảo không làm trở ngại cho các phương tiện tham gia giao thông khác. Từ hình vẽ cho thấy rằng bán kính quay vòng nhỏ nhất của máy san và chiều rộng nhỏ nhất của hành lang quay vòng có thể đạt được trong trường hợp máy san có các bánh quay vòng phía trước và khớp nối động quay vòng. Tức là nếu các máy san có các bánh quay vòng phía trước và khớp nối động quay thì có khả năng cơ động nhất. Hình 11. Quỹ đạo và bán kính quay vòng của máy san [13]: a) khớp động không chuyển hướng và các bánh phía trước quay vòng; б) khớp động quay vòng và các bánh lốp không quay vòng; в) cả khớp nối động quay và các bánh lốp phía trước cùng quay. S пч – chiều rộng lòng đường. Khi san nền đường thường sử dụng sơ đồ (hình 1.2), khi đó đất sẽ được san phẳng bằng cách đi theo các đường khép kín từ hai mép tới tâm. Vết các lối đi trước của lưỡi san chùm lên vết đi sau không quá 0,3 m. Với sơ đồ này thời gian quay đầu xe chiếm khoảng 20% so với thời gian thực hiện một vòng di chuyển. Việc giảm thời gian quay đầu xe cho phép giảm thời gian thực hiện một vòng và nâng cao công suất làm việc của áy san [120]. Hiện nay chưa có các phương pháp tính toán máy san đảm bảo các bánh lái phía trước và phía sau chuyển động cùng một vệt. Chính vì vậy cần tiến hành các nghiên cứu bổ sung để xác định sự phụ thuộc giữa góc quay vòng các bánh dẫn hướng và khớp nối động [103]. 1.4 Khái niệm về tính điều khiển, ổn định và tính cơ động của ô tô . Khi nghiên cứu chuyển động của ô tô trong đó có các xe trang bị khớp nối động, các nhà nghiên cứu đã đưa ra các thuật ngữ như tính điều khiển, tính ổn định và khả năng chuyển hướng, tính cơ động. Các thuật ngữ này được lấy trong lý thuyết ô tô [80]. Trên cơ sở ý nghĩa của các thuật ngữ này sẽ định ra các giới hạn nghiên cứu. Theo tiêu chuẩn ОСТ 37.001.051-86 “Tính điều khiển và ổn định của ô tô. Thuật ngữ và diễn giải” “Tính điều khiển của ô tô – tính chất của xe tuân thủ quỹ đạo và hướng chuyển động cho trước”. “Điều khiển quỹ đạo – điều khiển xe để giữ hoặc thay đổi hướng chuyển động”. “Tính ổn định của ô tô – tính chất của ô tô giữ được hướng chuyển động trong một giới hạn xác định trong suốt thời gian và cung đường xác định không phụ thuộc vào tác động của ngoại lực”. Các tác giả khác nhau diễn giải tính điều khiển của ô tô theo các quan điểm cá nhân. Ví dụ theo quan điểm của E.A. Chudacov thì tính điều khiển của ô tô là “…khả năng của ô tô thực hiện quay chính xác các bánh lái của nó” [152]. Theo L.L. Ginsburg tính điều khiển của ô tô được hiểu là “…khả năng của ô tô giữ được hướng chuyển động và thay đổi hướng chuyển động theo ý muốn của lái xe” [34]. Đồng thời đưa ra khái niệm “điều khiển chuyển động” là “… khả năng giữ và thay đổi giá trị vec tơ vận tốc thẳng và vận tốc góc chuyển động của ô tô” [35]. B.A. Illarionov định nghĩa tính điều khiển là “…” tính chất của ô tô thay đổi hướng chuyển động khi quay vòng bánh lái [52]. Theo quan điểm của A.C. Livinov và I.E Farabin “… tính điều khiển của ô tô là toàn bộ các tính chất xác định tính năng động lực học của ô tô phản ứng lại các tác động điều khiển” [68]. I.X Dakin diễn giải tính điều khiển “…là tính chất của các phần di chuyển chuyển động theo quỹ đạo với đường cong cho trước do tác động lên các bộ phận điều khiển – tay lái và qua dẫn động lái lên bánh xe” [51]. Theo quan niệm của G.A Smirnov tính ổn định – “…tính chất của xe giữ được hướng chuyển động trong một giới hạn xác định không phụ thuộc vào vận tốc chuyển động của xe, tác động của ngoại lực, các lực quán tính và lực trọng trường khi không có lực tác động điều khiển từ phía lái xe” [123]. Phân biệt quỹ đạo và ổn định hướng. Quỹ đạo – khả năng của xe giữ được hướng chuyển động, trọng tâm của xe, ổn định hướng chuyển động – khả năng giữ được hướng dọc theo trục xe [123]. Các tác động của lái xe nhằm mục đích giữ hoặc đổi giá trị và hướng vận tốc chuyển động đồng thời giữ được hướng của trục dọc thân xe gọi là các tác động điều khiển. Tính chất của xe quy định khả năng của nó đáp ứng tác động điều khiển gọi là tính chất điều khiển [123]. Trong lý thuyết điều khiển tự động tính ổn định được hiểu là khả năng của hệ thống quay trở lại các tham số ban đầu sau khi đã ngừng các tác động kích thích [165]. Trong công trình [76] tính điều khiển được định nghĩa là “…tính chất xử lý các tín hiệu điều khiển của xe với độ nhanh và chính xác khi lái xe đưa ra các tác động điều khiển nhằm đảm bảo chế độ chuyển động cho trước”. Trong một vài công trình nghiên cứu “tính điều khiển – là khả năng của xe ô tô giữ được hướng chuyển động cho trước hoặc thay đổi hướng chuyển động theo đúng ý muốn tác của xe thông qua tác động vào dẫn động điều khiển lái”. Quỹ đạo chuyển động của ô tô thường xuyên thay đổi không chỉ do điều kiện đường xá mà còn do tác động điều khiển của lái xe [80]. Tính ổn được định nghĩa “…khả năng ô tô giữ được hướng chuyển động cho trước dưới tác động của ngoại lực nhằm thay đổi chuyển động của nó hoặc có thể gây nghiên, thậm trí là lật xe” [80]. Còn một tính chất quan trong nữa của xe ô tô là tính cơ động. Theo I.X. Dakin tính cơ động – “là toàn bộ các tính chất đảm bảo khả năng chuyển động đổi hướng liên tục trên bề mặt đường có các giới hạn và hình dáng lòng đường xác định” [50]. Theo quan điểm của ông, tính cơ động là một trong các tính chất khai thác quan trọng nhất của xe của bộ các tính chất gồm tính điều khiển, khả năng quay vòng như đã mô tả ở trên. Trong công trình [54] tính cơ động được hiểu là “…tính chất của các phương tiện giao thông thay đổi vị trí của nó trong một diện tích , hình dạng giới hạn mà không cần phải tiến và lùi”. IA.E Farabin, A.C. Litvilov nêu ra định nghĩa “…tính cơ động là nhóm các tính chất đặc trưng cho khả năng của xe ô tô thay đổi vị trí của nó trong một bề mặt có diện tích giới hạn cần phải chuyển động theo quỹ đạo có đường cong lớn, trong đó cần dùng cả số lùi” [68]. Theo B.K. Vaxlamov tính cơ động là “…tính chất của xe có khả năng chuyển động trên diện tích nhỏ nhất của bề mặt đường” [29]. Theo ý kiến của tác giả [144] tính chất đặc trưng cho tính cơ động của xe ô tô có thể kể đến là tính quay vòng. Tính quay vòng “…khả năng của xe ô tô chuyển động quay vòng với bán kính nhỏ nhất”. Tác giả [80] tách tính cơ động ra khỏi tính điều khiển được “…là khả năng của xe ô tô chuyển động với bán kính nhỏ nhất và tuân thủ chiều rộng hành lang quay vòng dự kiến. Tính điều khiển do các tham số động học của xe quy định và sẽ đảm bảo tối ưu nếu xe được trang bị các bánh dẫn hướng của phía trước và phía sau” [80]. Tính quay vòng được định nghĩa trong các công trình nghiên cứu của I.X. Dakin “…tính chất của xe thực hiện quay vòng theo quỹ đạo với đường cong lớn nhất trên bề mặt có diện tích nhỏ nhất” [50]. Tính quay vòng trong công trình [83] được hiểu là khả năng của xe thay đổi hướng chuyển động trong các giới hạn rộng. Trong các công trình [123] định nghĩa tính chất của xe thực hiện quay vòng với đường cong tối đa “bán kính quay vòng nhỏ nhất” trên đường và địa hình gọi là tính quay vòng. Chỉ số cơ bản đánh giá tính quay vòng là bán kính quay vòng xe. Trong nhiều công trình thường gặp khái niệm tính quay vòng. Trong công trình [76] khái niệm tính quay vòng được hiểu là tính chất của xe thực hiện chuyển động cong với độ cong yêu cầu. Chuyển động cong của máy san thực hiện khi quay vòng bánh lái phía trước. Quỹ đạo chuyển động của máy san bắt đầu bị thay đổi dưới tác động của các phản lực ngang của mặt đường lên các bánh dẫn hướng phía trước [51]. Lực đẩy F xi .sin α đặt tại cầu trước được phân chia thành F xi .sin α và F xi .cos α đặt tại tâm mỗi bánh và hướng dọc theo trục của máy san. Thành phần lực F xi sin α vuông góc với mặt phẳng bánh lốp, lực này có xu hướng làm cho bánh lốp bị trượt ngang, lực bám R Yi φ ’ của bánh lốp phải thắng lực này. Chính vì vậy điều kiện để quay vòng không trượt các bánh lốp theo phương ngang là [51]: F xi sin α < R yi φ ’ , (1.1) trong đó R yi – phản lực theo phương thẳng đứng của mặt đường tác dụng lên cầu trước; φ ’ – hệ số bám của bánh lốp và đất khi bánh lốp dịch chuyển ngang. Khi giảm nhân tử của vế bên phải của bất đẳng thức (1.1) có thể làm mất tính điều khiển của máy san [51]. Hệ số bám theo phương ngang φ ’ lớn hơn khoảng 20% so với hệ số φ theo phương dọc. Lực phản theo phương ngang của mặt đường R zi , phát sinh do hệ quả tác động của lực bám R yi φ ’ và là ngoại lực làm cho máy san di chuyển chệch hướng ban đầu [51]. Trong công trình chấp nhận giả thiết rằng khi xây dựng mô hình mô phỏng quá trình quay vòng của máy san có khớp nối động, điều kiện quay vòng (1.1) được thỏa mãn. Phân tích chuyển động của máy san theo quỹ đạo cong thường sử dụng giả thiết về tâm và bán kính quay vòng cố định [51]. Vận tốc góc quy dẫn quay vòng của các bánh điều khiển phía trước α ’ được xác định đặc điểm quỹ đạo chuyển động cong của máy san. Máy san có thể ở một trong các trạng thái: đi vào quỹ đạo chuyển động – góc quay vòng của bánh dẫn hướng gia tăng độ lớn, tâm quay vòng dịch chuyển từ vô cùng về giá trị xác định, vận tốc góc quay vòng bánh lốp d α/ dt > 0; chuyển động theo quỹ đạo cong – góc quay vòng của các bánh lốp phía trước của máy san ổn định, tâm quay vòng và bán kính quay vòng ổn định, vận tốc góc quay vòng của bánh lốp d α/ dt = 0; chuyển động đi ra khỏi quỹ đạo – góc quay vòng các bánh lái phía trước giảm, tâm quay vòng dịch chuyển về vô cùng, vận tốc góc quay vòng của các bánh lái phía trước d α/ dt < 0 [51]. Để phân tích chuyển động cong của máy san có khớp nối động cần đưa ra hệ số quay vòng – mối quan hệ vận tốc góc quay vòng bánh lái phía trước của máy san α ’ và vận tốc chuyển động tịnh tiến của máy san V A Г . Ý nghĩa vật lý K n α – sự thay đổi góc α trên một đơn vị độ dài quãng đường máy san đi qua. (rad/m) (1.2) Đại lượng có ý nghĩa đặc trưng cho chuyển động cong của máy san có khớp nối động là vận tốc thay đổi góc quay vòng của khớp nối động trong một đơn vị quãng đường máy san đi qua, như vậy cần đưa ra hệ số góc quay vòng của khớp nối động: (rad/m) (1.3) Có thể đưa ra kết luận trên cơ sở phân tích phần lớn các định nghĩa về tính điều khiển có thể tách ra khái niệm chung"
+  },
+  {
+    "chunk_id": 5,
+    "chapter": "4",
+    "section": "4",
+    "title": "Chương 4 – Các kết quả thí nghiệm lý thuyết",
+    "semantic_block": "chapter_intro",
+    "formulas": [
+      "(3.11)",
+      "(4.2)",
+      "(4.3)",
+      "(4.4)",
+      "(4.5)",
+      "(4.6)",
+      "(4.7)",
+      "(4.8)",
+      "(4.9)",
+      "(4.4)",
+      "(4.5)",
+      "(4.10)",
+      "(4.11)",
+      "(4.12)",
+      "(4.13)",
+      "(4.14)",
+      "(4.15)",
+      "(4.16)",
+      "(4.17)",
+      "(4.28)",
+      "(4.18)",
+      "(4.19)"
+    ],
+    "formula_objects": [
+      {
+        "id": "(3.11)",
+        "raw_text": "c",
+        "position": 1881
+      },
+      {
+        "id": "(4.2)",
+        "raw_text": "",
+        "position": 3545
+      },
+      {
+        "id": "(4.3)",
+        "raw_text": "0,0001. L б + 0,863",
+        "position": 4504
+      },
+      {
+        "id": "(4.4)",
+        "raw_text": "R min",
+        "position": 4657
+      },
+      {
+        "id": "(4.5)",
+        "raw_text": "(L б ) → min",
+        "position": 4854
+      },
+      {
+        "id": "(4.6)",
+        "raw_text": "S k → b k",
+        "position": 5182
+      },
+      {
+        "id": "(4.7)",
+        "raw_text": "",
+        "position": 5543
+      },
+      {
+        "id": "(4.8)",
+        "raw_text": "≤ 45 o",
+        "position": 5557
+      },
+      {
+        "id": "(4.9)",
+        "raw_text": "4,5 m ≤ L б ≤ 7,5 m",
+        "position": 5626
+      },
+      {
+        "id": "(4.4)",
+        "raw_text": "c",
+        "position": 5668
+      },
+      {
+        "id": "(4.5)",
+        "raw_text": "c",
+        "position": 5708
+      },
+      {
+        "id": "(4.10)",
+        "raw_text": "",
+        "position": 8662
+      },
+      {
+        "id": "(4.11)",
+        "raw_text": "",
+        "position": 9158
+      },
+      {
+        "id": "(4.12)",
+        "raw_text": "",
+        "position": 9313
+      },
+      {
+        "id": "(4.13)",
+        "raw_text": ",",
+        "position": 9622
+      },
+      {
+        "id": "(4.14)",
+        "raw_text": ",",
+        "position": 9874
+      },
+      {
+        "id": "(4.15)",
+        "raw_text": "M→min",
+        "position": 10202
+      },
+      {
+        "id": "(4.16)",
+        "raw_text": "б→ min.",
+        "position": 10278
+      },
+      {
+        "id": "(4.17)",
+        "raw_text": "t nn →min",
+        "position": 10451
+      },
+      {
+        "id": "(4.28)",
+        "raw_text": "c",
+        "position": 12126
+      },
+      {
+        "id": "(4.18)",
+        "raw_text": ".",
+        "position": 12181
+      },
+      {
+        "id": "(4.19)",
+        "raw_text": "/ i s .",
+        "position": 12402
+      }
+    ],
+    "token_count": 7353,
+    "content": "4. CÁC KẾT QUẢ THÍ NGHIỆM LÝ THUYẾT Mục tiêu của các thí nghiệm mô hình toán (máy san có khớp nối động) gồm sự xuất hiện các quy luật mới, mà cụ thể là thu được sự phụ thuộc giữa các tham số hình học và động học của quá trình quay vòng АГ c ШСР. Các dữ liệu của sự phụ thuộc là cần thiết để tổng hợp các tham số tối ưu АГ c ШСР, cũng như hoàn thiện РУ АГ c ШСР nhằm mục đích nâng cao tính cơ động của АГ c ШСР. 4. 1 Cơ sở tiêu chuẩn hiệu quả của tính cơ động máy san với khung khớp bản lề động. Giai đoạn quan trọng khi tính toán các thong số АГ c ШСР và giải quyết bài toán tối ưu hóa các thong số đó là cơ sở tiêu chuẩn hiệu [105, 108]. Khi giải những bài toán kỹ thuật tồn tại sự cần thiết phải so sánh một vài phương án và lừa chọn tốt nhất trong số đó. Nếu vận dụng các giải quyets không hợp lý, có thể kéo theo sự thất thoát. Để loại trừ các tốn kém về thời gian và vật chất phải đưa vào tiêu chuẩn tính hiệu quả. Ý nghĩa cuối cùng của tiêu chuẩn tính hiệu quả đặc chưng bởi tính chất nào đó của thông số từ quan điểm tiêu chuẩn kỹ thuật-kinh tế của bản thiết kế РУ [105, 158] . Tính hiệu quả của РУ có thể được đặt ra ở giai đoạn nào đó trong các giai đoạn sau [159] 1. Giai đoạn trước thiết kế và giai đoạn thiết kế, khi các bản vẽ của xe được tạo ra. 2. Giai đoạn khai thác sử dụng, khi xe chế tạo hàng loạt được khai thác sử dụng ở các điều kiện khác nhau. Tiêu chuẩn tính hiệu quả được hiểu là thông số nào đó có thể đặc chưng cho tính cơ động của xe san, cụ thể là khả năng thực hiện quay vòng xe với bán kính nhỏ nhất khi tồn tại các kích thước tiêu chuẩn của đường đô thị. Yêu cầu chính đối với việc lựa chọn tiêu chuẩn tính hiệu quả là tính thông tin của nó. Số lượng các tiêu chuẩn tính hiệu quả có thể là: Bán kính quay vòng R n ; tỷ lệ giữa bán kính quay vòng xe với chiều dài cơ sở của xe R n /L б ; hệ số cơ sở của xe san K б , mà nó được xác định theo công thức (3.11) [98, 162]. Có thể yêu cầu rằng tiêu chuẩn tính hiệu quả của tính cơ động xe san là bán kính quay vòng nhỏ nhất R min , nhưng cần phải tiến hành các thí nghiệm bổ sung và xác định các thông số hình học nào ảnh hướng lớn nhất đến R min để đưa chúng vào phương pháp tổng hợp tối ưu [105]. Khi xác định sự ảnh hưởng của các hệ số cơ sở lên bán kính quay vòng cần phải tiến hành thực nghiệm, trong đó đối với mỗi một giá trị của hệ số cơ sở được xác định bán kính quay vòng nhỏ nhất [96, 101, 109]. Sự phụ thuộc của R min = ƒ( K б ) được làm gần đúng nhờ đa thức bậc hai với hệ số định thức R 2 = 0,99 và sai số tương đối δ< 2,2% [105]: = 11,2. -22,12. +16,99 Hình 4.1. Sự phụ thuộc thực nghiệm R min = ƒ( K б ) và đường cong gần đúng Trên hình 4.1. rõ ràng rằng sự phụ thuộc R min = ƒ( K б ) có tính chất hipebon và khi K б thay đổi 50% thì bán kính quay vòng nhỏ nhất thay đổi giá trị ≈29%. Các kết quả thí nghiệm thực nghiệm chỉ ra rằng K б không tồn tại ảnh hưởng lên độ lớn của bán kính nhỏ nhất, nó cho phép đưa ra kết luận về tính hạn chế thong tin của K б và không thích hợp sử dụng nó trong tiêu chuẩn tính hiệu quả [105]. Tiến hành các thí nghiệm thực nghiệm xác định tỷ số của bán kính quay vòng nhỏ nhất đối với chiều dài cơ sở của xe san trong sự phụ thuộc vào chiều dài cơ sở khi các giá trị cố định của hệ số cơ sở [96, 101, 109]. Đồ thị hàm số nhận được (hình 4.2) được cho gần đúng bằng phương pháp đa thức nhiều thành phần bậc hai với hệ số định thức R 2 = 0,98 và sai số tương đối lớn nhất δ = 0,6617% [105]: Hình 4.2. Dạng đồ thị sự thuộc R min /L б ; = ƒ( L б ) và đường cong gần đúng Phương trình đường cong được viết dưới dạng sau [105]: (4.2) Tiêu chuẩn tính hiệu quả bằng tỉ số của bán kính quay vòng nhỏ nhất đối với chiều dài cơ sở của xe san A Г, như vậy có tính chất hipebon, và khi thay đổi chiều dài cơ sở A Г gần 2 lần thì chỉ số này bị thay đổi 8-9%, và nó lại không phải là chỉ số thong tin và không thể sử dụng là tiêu chuẩn tính hiệu quả của khả năng cơ động của xe san A Г [105]. Chỉ số thong tin nhất chính là sự phuộc của bán kính quay vòng nhỏ nhất vào chiều dài cơ sở của xe san.Thực nghiệm đã xác định rằng khi nâng chiều dài cơ sở gần 50%, đối với hệ số cơ sở cố định thì giá trị của bán kính quay vòng nhỏ nhất tăng tuyến tính khoảng 50% và như vậy có thể đặc chưng tính cơ động của xe [101, 105, 109]. Hình 4.3. Sự phụ thuộc thực nghiệm R min = ƒ( L б ) và đường cong gần đúng Trên hình 4.3 thể hiện sự phụ thuộc R min = ƒ(L б ). Sự phụ thuộc này được làm gần đúng bằng phương trình tuyến tính với hệ số xác định R 2 = 0,99 và sai số tương đối lớn nhất δ = 1% [105]: R min = 0,0001. L б + 0,863 (4.3) Như vậy, trong công việc được đề xuất, tiêu chí hiệu quả nên chọn bán kính quay vòng nhỏ nhất của xe san АГ c ШСР [105]: K э = R min (4.4) Theo vấn đề đặt ra để tăng tính cơ động của xe san ở điều kiện hạn chế, có thể thiết lập hàm mục tiêu và hướng, mà nó sẽ cho biết ý nghĩa của giải pháp cần phải tối ưu [105]: R min = ƒ(L б ) → min (4.5) Chiều rộng hành lang ( S k , m)[31], không được vượt quá chiều rộng vết bánh có tính đến các phần nhô ra của xe san (b k, m), có nghĩa là, nó là cần thiết đảm bảo sự quay của xe san với chiều rộng hành lang nhỏ nhất của chuyển động của các bánh xe xe sàn. Điều kiện này được sử dụng như là một giới hạn [105]: S k → b k (4.6) Ngoài ra cần chỉ ra các giá trị biên của các thông số thiết kế khác nhau của xe san, mà nó sẽ ảnh hưởng trực tiếp đến bán kính quay vòng Đây là góc quay của bánh điều khiển trước α, góc gấp của ШСР β, chiều dài của cơ sở của xe sàn L б . Nhu vậy, giới hạn của các phương án các góc quay của bánh xe và gấp của ШСР [2, 73, 105]: 0 o ≤ α ≤ 45 o β (4.7) 0 o ≤ β ≤ 45 o (4.8) Giới hạn phương án chọn độ dài cơ sở của xe sàn [3,105] 4,5 m ≤ L б ≤ 7,5 m (4.9) Do đó, biểu thức (4.4) đặt tiêu chí hiệu suất, biểu thức (4.5) hàm mục tiêu và hướng của nó, các biểu thức (4.6 ... 4.9) thiết lập các điều kiện biên và các hạn chế của chuyển động cong của xe sàn với khung khớp nối. Các phụ thuộc thu được (4.4 ... 4.9) được xác minh để cho các thử nghiệm tiếp theo về chuyển động cong của xe sàn với khung khớp nối và cho phép xác định thiết kế ưu tiên cao nhất của xe san để thực hiện quay vòng với bán kính nhỏ nhất và chế tạo vô lăng điều khiển xe sàn với khung khớp nối bản lề, cho phép sử dụng XP gấp ở chế độ vận chuyển [33, 105]. 4.2 Nghiên cứu động học của xe san có khung khớp nối bản lề Xe san có thể nằm ở một trong các giai đoạn của chuyển động cong: chuyển động theo quỹ đạo lối vào khi quay vòng, chuyển động theo quỹ đạo vòng tròn, chuyển động theo quỹ đạo thoát ra khi quay vòng [51]. Trong các điều kiện khai trác sử dụng thường xuyên có một quá trình chuyển tiếp (đầu vào đầu ra) quỹ đạo cong, vì góc α liên tục thay đổi độ giá trị của mình. Vận tốc góc của bánh xe phía trước đạt một mức độ lớn xác định quỹ đạo của chuyển động cong của xe san. Theo các nghiên cứu thực nghiệm [51] giá trị của vận tốc góc trung bình α = 0,01c -1 0,15c -1 . Trên hình 4.4 cho thấy đồ thị phụ thuộc = f (t), thu được từ các nghiên cứu phân tích về xe san với khung khớp nối bản lề cấp trung bình. Hình 4.4 Thay đổi góc (a) và vận tốc độ góc (b) quay vòng bánh điều khiển trước trong quá trình chuyển động cong của máy san Hình 4.5 cho thấy sự phụ thuộc = f(t) t) thu được từ các nghiên cứu phân tích về xe san với khung khớp nối bản lề cấp trung bình. Giá trị vận tốc góc trung bình gấp khung khớp nối bản lề = 0,02c -1 0,3c -1 . Khi so sánh các kết quả của các thí nghiệm này với kết quả thí nghiệm lý thuyết xe san với khung khớp nối bản lề loại trung bình với công thức bánh xe 1 × 2 × 3, có thể lưu ý rằng mối quan hệ tỷ lệ giữa các góc quay của bánh lái trước và sự gấp của khung khớp nối bản lề được bảo toàn đối với vận tốc góc quay vòng của bánh điều khiển trước và vận tốc gấp khung . Hình 4.5 Thay đổi góc (a) và vận tốc góc (b) gấp khung khớp nối trong quá trình chuyển động cong của xe san Các nghiên cứu thực nghiệm [51] cho thấy, tốc độ dịch chuyển xe sàn càng lớn thì hệ số chế độ quay vòng K na càng nhỏ. Trên hình 4.6 được trình bày như ví dụ quỹ đạo chuyển đổi đầu vào và đầu ra của xe san loại trung bình. Trên hình 4.7 cho thấy đồ thị phụ thuộc K n α = ƒ(Ʋ A Г ), K n β = ƒ(Ʋ A Г ), được xây dựng trên cơ sở [51]. Hình 4.6 – Quỹ đạo chuyển đổi vào và ra của xe sàn khi vào cua ở tốc độ v = 5 m / s Hình 4.7 Các giá trị thí nghiệm của các hệ số chế độ quay vòng K n α và K n β xe san chuyển động ở các vận tốc khác nhau [51] Khi chuyển động theo quỹ đạo chuyển tiếp, giá trị của hệ số chế độ sẽ khác nhau do sự thay đổi liên tục vận tốc góc. Ở giá trị trung bình K n β lớn hơn K n α khoảng 2 lần. Điều này cho thấy rằng giữa hệ số chế độ có mối quan hệ tỷ lệ thuận, cũng như giữa góc quay của bánh lái trước và góc gập của khung khớp nối: K n β =k. K n α (4.10) Trong đó: k hệ số tỷ lệ. 4.3 Phân tích dẫn động thủy lực bánh lái điều khiển xe san với khung khớp nối bản lề. Các quá trình chuyển tiếp, phát sinh trong dẫn động thủy lực bánh lái điều khiển sự nhiễu loạn và tác động điều khiển, làm cho thống mất đi trạng thái cân bằng. Hệ thống điều khiển bánh lái cần phải phân tích tính ổn định đối với các tác động bên ngoài. Trong công trình này, đánh giá định lượng về sự ổn định của hệ thống được đánh giá nhờ sử dụng hệ số dao động M [158, 165]: (4.11) Trong đó: X max1 và X max2 giá trị của hai độ lệch tối đa liền kề của đặc tính chuyển tiếp từ trạng thái ổn định hoặc giá trị cho trước [158, 165]: (4.12) Khi M ≥ 100%, hệ thống sẽ không ổn định với dao động không tắt dần. Với 0 ≤ M ≤ 99%, hệ thống sẽ ổn định. Nếu quá trình chuyển tiếp là không tuần hoàn, hệ số dao động sẽ có xu hướng dần về 0, hệ thống sẽ hoàn toàn ổn định. Để bảo đảm tính ổn định cần phải hoàn thành điều kiện [158, 165]: 0%≤ M ≤ 100%, (4.13) Phù hợp với các yêu cầu chức năng của các hệ thống động học phức tạp, phải điều chỉnh lại giá trị đầu ra σ không nên vượt quá 20%. Chỉ số chất lượng này cũng như sự điều chỉnh lại cần phải nằm nằm trong giới hạn sau đây [158, 165]: 0%≤ σ ≤ 20%, (4.14) Do đó, các yêu cầu đối với các đặc tính đầu ra có thể được coi là giới hạn, đảm bảo sự ổn định của hệ thống con của dẫn động điều khiển thủy lực xe san với khung khớp nối bản lề. Tuy nhiên, cần thiết chỉ ra hướng của các đặc tính đầu ra và các chỉ số ổn định. 1. Để làm việc ổn định nhất, hệ số dao động M nên nhỏ nhất: M→min (4.15) 2. Để giảm sự điều chỉnh quá của các đặc tính đầu ra cần phải: б→ min. (4.16) 3. Để tăng độ nhạy của dẫn động thủy lực vô lăng điều khiển cần phải giảm thời gian điều chỉnh dòng chảy tại cửa ra (thời gian chuyển tiếp quá trình), đó là: t nn →min (4.17) Như vậy, các biểu thức (4.13 ... 4.14) xác định giới hạn của đặc tính đầu ra của các chỉ ổn định của dẫn động thủy lực vô lăng điều khiển để đảm bảo khả năng làm việc của nó. Biểu thức (4.15 ... 4.17) cho biết hướng, về phía cần thay đổi các giá trị của đặc tính đầu ra của các chỉ số ổn định chất lượng của ГП РУ để đảm bảo các yêu cầu đặt ra [158]. 4.3.1 Kế hoạch thử nghiệm. Lựa chọn tác động điều khiển lên tay lái điều khiển xe san. Để tiến hành phân tích tay lái điều khiển cần phải: lựa chọn tác động điều khiển lên tay lái điều khiển, thu được được các đặc tính chuyển tiếp (tạm thời) giá trị đầu ra. Vì tay lái điều khiển xe sàn là một hệ thống phi tuyến tính, thí nghiệm tính ổn định của hệ phi tuyến được thực hiện bằng phương pháp quỹ đạo pha. Cần phải thiết lập các đặc tính chuyển tiếp (tạm thời). 1. Góc quay của vô lăng θ ; 2. Góc quay của ống lót phân phối thủy lực – θ OC ; 3. Lưu lượng của chất lỏng tại lối ra của vô lăng thủy lực; 4. Tọa độ và tốc độ dịch chuyển của các cán pít-tông xi lanh thực hiện thủy lực ; 5. Lưu lượng chất lỏng vào xi lanh thực hiện thủy lực để gập khung khớp nối bản lề; 6. Góc quay của bánh lái trước; 7. Góc gấp của khung khớp nối bản lề. Phân tích các đặc tính tĩnh của tay lái điều khiển nên được thực hiện tại đầu ra ở chế độ làm việc được đặt và khi ngắt sự tác động lên vô lăng điều khiển [158]. Tỷ số truyền chung i s của vô lăng điều khiển là tỷ lệ của sự thay đổi góc quay của vô lăng θ với sự thay đổi góc quay trung bình của cả hai bánh xe α, cụ thể là khi quay vòng không có mô men của bánh lái xe để ngắt chuyển động theo đường thẳng [119]. Góc quay trung bình của bánh xe được tính theo công thức (4.28), và tỷ số truyền động học [119]: i s = Δθ / Δα. (4.18) Tỷ số truyền của tay lái được quy định trong tài liệu kỹ thuật của xe san [1, 2,3, 4]. Từ đây có thể tính toán sự thay đổi góc quay của bánh lái xe phía trước tùy thuộc vào những thay đổi của vô lăng lái: Δα = Δθ / i s . (4.19) Các phương trình này có giá trị tra cứu khi tỷ số truyền không đổi. Các tác động điều khiển trên vô lăng là tín hiệu tăng dần góc quay của bánh lái, nó cho phép thu được đặc tính chuyển tiếp (tạm thời) vô lăng xe san (hình 4.8). Hình 4.8 cho thấy các đặc tính chuyển tiếp (tạm thời) của góc quay θ và vận tốc góc của góc quay vô lăng. Hình 4.8. Tác động điều khiển lên dẫn động thủy lực: a) Góc quay vô lăng; b) Vận tốc góc quay vô lăng 4.3.2 Đánh giá tính ổn định của vô lăng lái xe san Có nhiều phương pháp khác nhau đánh giá tính ổn định của hệ phi tuyến [56]. Trong công trình này, đánh giá tính ổn định của vô lăng điều khiển được tiến hành bằng phương pháp quỹ đạo pha. Các quỹ đạo pha được xây dựng trên mặt phẳng pha, trong đó trục hoành thể hiện biến số, còn trục tung – là đạo hàm của nó [56, 158]. Trên hình 4.9 cho thấy đặc tính chuyển tiếp của việc tăng tiêu lưu lượng chất lỏng công tác tại đầu ra cơ cấu điều khiển thủy lực vô lăng ГРМ АГ. Hình 4.9. Quá trình chuyển tiếp sự tăng lưu lượng ở đầu ra từ cơ cấu điều khiển thủy lực vô lăng Trên hình 4.10 cho thấy quá trình chuyển tiếp làm việc của ГМОС, nó bảo đảm cung cấp chất lỏng công tác tới xi lanh thực hiện thủy lực. Sự khác nhau của vô lăng điều khiển với tác động điều khiển nối tiếp và song song là ở trường hợp thứ nhất, tín hiệu điều khiển mở dẫn động thủy lực khung khớp bản lề đến sau khi bắt đầu đổi hướng hướng bánh xe điều khiển phía trước bằng cách theo dõi góc quay của bánh xe α nhờ cảm biến, còn trong trường hợp thứ hai đồng bộ chúng, bằng cách theo dõi góc quay của tay lái bánh xe. Điều này xác định sự trễ của vô lăng điều khiển với điều khiển nối tiếp. (Hình 4.11, 4.12). Hình 4.10. Quá trình chuyển tiếp góc quay của động cơ thủy lực phản hồi Hình 4.11. Quá trình chuyển tiếp của lưu tốc dòng chảy tăng ở đầu ra của van phân phối điều khiển nối tiếp xi lanh thủy lực gấp khung khớp nối Sự trễ của vô lăng điều khiển với sự điều khiển nối tiếp có thể được nhận thấy qua các hình 4.13 ... 4.15, vị trí thể hiện các dịch chuyển và tốc độ của các thanh cán pít tong xi lanh thực hiện thủy lực. Hình 4.12. Quá trình chuyển tiếp của lưu tốc dòng chảy tăng ở đầu ra của van phân phối điều khiển song song xi lanh thủy lực gấp khung khớp nối Hình 4.13. Ti ế n b ộ chuy ể n ti ế p và t ố c độ c ủ a thanh đ i ề u hành xi lanh th ủ y l ự c quay bánh lái phía tr ướ c biến bánh lái trước và gấp CRS cho RU điều khiển tuần tự và song song"
+  },
+  {
+    "chunk_id": 6,
+    "chapter": "4",
+    "section": "4.2",
+    "title": "4.2 Nghiên cứu động học của xe san",
+    "semantic_block": "kinematic_analysis",
+    "formulas": [
+      "(4.10)",
+      "(4.11)",
+      "(4.12)",
+      "(4.13)",
+      "(4.14)",
+      "(4.15)",
+      "(4.16)",
+      "(4.17)",
+      "(4.28)",
+      "(4.18)",
+      "(4.19)"
+    ],
+    "formula_objects": [
+      {
+        "id": "(4.10)",
+        "raw_text": "",
+        "position": 2437
+      },
+      {
+        "id": "(4.11)",
+        "raw_text": "",
+        "position": 2933
+      },
+      {
+        "id": "(4.12)",
+        "raw_text": "",
+        "position": 3088
+      },
+      {
+        "id": "(4.13)",
+        "raw_text": ",",
+        "position": 3397
+      },
+      {
+        "id": "(4.14)",
+        "raw_text": ",",
+        "position": 3649
+      },
+      {
+        "id": "(4.15)",
+        "raw_text": "M→min",
+        "position": 3977
+      },
+      {
+        "id": "(4.16)",
+        "raw_text": "б→ min.",
+        "position": 4053
+      },
+      {
+        "id": "(4.17)",
+        "raw_text": "t nn →min",
+        "position": 4226
+      },
+      {
+        "id": "(4.28)",
+        "raw_text": "c",
+        "position": 5901
+      },
+      {
+        "id": "(4.18)",
+        "raw_text": ".",
+        "position": 5956
+      },
+      {
+        "id": "(4.19)",
+        "raw_text": "/ i s .",
+        "position": 6177
+      }
+    ],
+    "token_count": 4301,
+    "content": "4.2 Nghiên cứu động học của xe san có khung khớp nối bản lề Xe san có thể nằm ở một trong các giai đoạn của chuyển động cong: chuyển động theo quỹ đạo lối vào khi quay vòng, chuyển động theo quỹ đạo vòng tròn, chuyển động theo quỹ đạo thoát ra khi quay vòng [51]. Trong các điều kiện khai trác sử dụng thường xuyên có một quá trình chuyển tiếp (đầu vào đầu ra) quỹ đạo cong, vì góc α liên tục thay đổi độ giá trị của mình. Vận tốc góc của bánh xe phía trước đạt một mức độ lớn xác định quỹ đạo của chuyển động cong của xe san. Theo các nghiên cứu thực nghiệm [51] giá trị của vận tốc góc trung bình α = 0,01c -1 0,15c -1 . Trên hình 4.4 cho thấy đồ thị phụ thuộc = f (t), thu được từ các nghiên cứu phân tích về xe san với khung khớp nối bản lề cấp trung bình. Hình 4.4 Thay đổi góc (a) và vận tốc độ góc (b) quay vòng bánh điều khiển trước trong quá trình chuyển động cong của máy san Hình 4.5 cho thấy sự phụ thuộc = f(t) t) thu được từ các nghiên cứu phân tích về xe san với khung khớp nối bản lề cấp trung bình. Giá trị vận tốc góc trung bình gấp khung khớp nối bản lề = 0,02c -1 0,3c -1 . Khi so sánh các kết quả của các thí nghiệm này với kết quả thí nghiệm lý thuyết xe san với khung khớp nối bản lề loại trung bình với công thức bánh xe 1 × 2 × 3, có thể lưu ý rằng mối quan hệ tỷ lệ giữa các góc quay của bánh lái trước và sự gấp của khung khớp nối bản lề được bảo toàn đối với vận tốc góc quay vòng của bánh điều khiển trước và vận tốc gấp khung . Hình 4.5 Thay đổi góc (a) và vận tốc góc (b) gấp khung khớp nối trong quá trình chuyển động cong của xe san Các nghiên cứu thực nghiệm [51] cho thấy, tốc độ dịch chuyển xe sàn càng lớn thì hệ số chế độ quay vòng K na càng nhỏ. Trên hình 4.6 được trình bày như ví dụ quỹ đạo chuyển đổi đầu vào và đầu ra của xe san loại trung bình. Trên hình 4.7 cho thấy đồ thị phụ thuộc K n α = ƒ(Ʋ A Г ), K n β = ƒ(Ʋ A Г ), được xây dựng trên cơ sở [51]. Hình 4.6 – Quỹ đạo chuyển đổi vào và ra của xe sàn khi vào cua ở tốc độ v = 5 m / s Hình 4.7 Các giá trị thí nghiệm của các hệ số chế độ quay vòng K n α và K n β xe san chuyển động ở các vận tốc khác nhau [51] Khi chuyển động theo quỹ đạo chuyển tiếp, giá trị của hệ số chế độ sẽ khác nhau do sự thay đổi liên tục vận tốc góc. Ở giá trị trung bình K n β lớn hơn K n α khoảng 2 lần. Điều này cho thấy rằng giữa hệ số chế độ có mối quan hệ tỷ lệ thuận, cũng như giữa góc quay của bánh lái trước và góc gập của khung khớp nối: K n β =k. K n α (4.10) Trong đó: k hệ số tỷ lệ. 4.3 Phân tích dẫn động thủy lực bánh lái điều khiển xe san với khung khớp nối bản lề. Các quá trình chuyển tiếp, phát sinh trong dẫn động thủy lực bánh lái điều khiển sự nhiễu loạn và tác động điều khiển, làm cho thống mất đi trạng thái cân bằng. Hệ thống điều khiển bánh lái cần phải phân tích tính ổn định đối với các tác động bên ngoài. Trong công trình này, đánh giá định lượng về sự ổn định của hệ thống được đánh giá nhờ sử dụng hệ số dao động M [158, 165]: (4.11) Trong đó: X max1 và X max2 giá trị của hai độ lệch tối đa liền kề của đặc tính chuyển tiếp từ trạng thái ổn định hoặc giá trị cho trước [158, 165]: (4.12) Khi M ≥ 100%, hệ thống sẽ không ổn định với dao động không tắt dần. Với 0 ≤ M ≤ 99%, hệ thống sẽ ổn định. Nếu quá trình chuyển tiếp là không tuần hoàn, hệ số dao động sẽ có xu hướng dần về 0, hệ thống sẽ hoàn toàn ổn định. Để bảo đảm tính ổn định cần phải hoàn thành điều kiện [158, 165]: 0%≤ M ≤ 100%, (4.13) Phù hợp với các yêu cầu chức năng của các hệ thống động học phức tạp, phải điều chỉnh lại giá trị đầu ra σ không nên vượt quá 20%. Chỉ số chất lượng này cũng như sự điều chỉnh lại cần phải nằm nằm trong giới hạn sau đây [158, 165]: 0%≤ σ ≤ 20%, (4.14) Do đó, các yêu cầu đối với các đặc tính đầu ra có thể được coi là giới hạn, đảm bảo sự ổn định của hệ thống con của dẫn động điều khiển thủy lực xe san với khung khớp nối bản lề. Tuy nhiên, cần thiết chỉ ra hướng của các đặc tính đầu ra và các chỉ số ổn định. 1. Để làm việc ổn định nhất, hệ số dao động M nên nhỏ nhất: M→min (4.15) 2. Để giảm sự điều chỉnh quá của các đặc tính đầu ra cần phải: б→ min. (4.16) 3. Để tăng độ nhạy của dẫn động thủy lực vô lăng điều khiển cần phải giảm thời gian điều chỉnh dòng chảy tại cửa ra (thời gian chuyển tiếp quá trình), đó là: t nn →min (4.17) Như vậy, các biểu thức (4.13 ... 4.14) xác định giới hạn của đặc tính đầu ra của các chỉ ổn định của dẫn động thủy lực vô lăng điều khiển để đảm bảo khả năng làm việc của nó. Biểu thức (4.15 ... 4.17) cho biết hướng, về phía cần thay đổi các giá trị của đặc tính đầu ra của các chỉ số ổn định chất lượng của ГП РУ để đảm bảo các yêu cầu đặt ra [158]. 4.3.1 Kế hoạch thử nghiệm. Lựa chọn tác động điều khiển lên tay lái điều khiển xe san. Để tiến hành phân tích tay lái điều khiển cần phải: lựa chọn tác động điều khiển lên tay lái điều khiển, thu được được các đặc tính chuyển tiếp (tạm thời) giá trị đầu ra. Vì tay lái điều khiển xe sàn là một hệ thống phi tuyến tính, thí nghiệm tính ổn định của hệ phi tuyến được thực hiện bằng phương pháp quỹ đạo pha. Cần phải thiết lập các đặc tính chuyển tiếp (tạm thời). 1. Góc quay của vô lăng θ ; 2. Góc quay của ống lót phân phối thủy lực – θ OC ; 3. Lưu lượng của chất lỏng tại lối ra của vô lăng thủy lực; 4. Tọa độ và tốc độ dịch chuyển của các cán pít-tông xi lanh thực hiện thủy lực ; 5. Lưu lượng chất lỏng vào xi lanh thực hiện thủy lực để gập khung khớp nối bản lề; 6. Góc quay của bánh lái trước; 7. Góc gấp của khung khớp nối bản lề. Phân tích các đặc tính tĩnh của tay lái điều khiển nên được thực hiện tại đầu ra ở chế độ làm việc được đặt và khi ngắt sự tác động lên vô lăng điều khiển [158]. Tỷ số truyền chung i s của vô lăng điều khiển là tỷ lệ của sự thay đổi góc quay của vô lăng θ với sự thay đổi góc quay trung bình của cả hai bánh xe α, cụ thể là khi quay vòng không có mô men của bánh lái xe để ngắt chuyển động theo đường thẳng [119]. Góc quay trung bình của bánh xe được tính theo công thức (4.28), và tỷ số truyền động học [119]: i s = Δθ / Δα. (4.18) Tỷ số truyền của tay lái được quy định trong tài liệu kỹ thuật của xe san [1, 2,3, 4]. Từ đây có thể tính toán sự thay đổi góc quay của bánh lái xe phía trước tùy thuộc vào những thay đổi của vô lăng lái: Δα = Δθ / i s . (4.19) Các phương trình này có giá trị tra cứu khi tỷ số truyền không đổi. Các tác động điều khiển trên vô lăng là tín hiệu tăng dần góc quay của bánh lái, nó cho phép thu được đặc tính chuyển tiếp (tạm thời) vô lăng xe san (hình 4.8). Hình 4.8 cho thấy các đặc tính chuyển tiếp (tạm thời) của góc quay θ và vận tốc góc của góc quay vô lăng. Hình 4.8. Tác động điều khiển lên dẫn động thủy lực: a) Góc quay vô lăng; b) Vận tốc góc quay vô lăng 4.3.2 Đánh giá tính ổn định của vô lăng lái xe san Có nhiều phương pháp khác nhau đánh giá tính ổn định của hệ phi tuyến [56]. Trong công trình này, đánh giá tính ổn định của vô lăng điều khiển được tiến hành bằng phương pháp quỹ đạo pha. Các quỹ đạo pha được xây dựng trên mặt phẳng pha, trong đó trục hoành thể hiện biến số, còn trục tung – là đạo hàm của nó [56, 158]. Trên hình 4.9 cho thấy đặc tính chuyển tiếp của việc tăng tiêu lưu lượng chất lỏng công tác tại đầu ra cơ cấu điều khiển thủy lực vô lăng ГРМ АГ. Hình 4.9. Quá trình chuyển tiếp sự tăng lưu lượng ở đầu ra từ cơ cấu điều khiển thủy lực vô lăng Trên hình 4.10 cho thấy quá trình chuyển tiếp làm việc của ГМОС, nó bảo đảm cung cấp chất lỏng công tác tới xi lanh thực hiện thủy lực. Sự khác nhau của vô lăng điều khiển với tác động điều khiển nối tiếp và song song là ở trường hợp thứ nhất, tín hiệu điều khiển mở dẫn động thủy lực khung khớp bản lề đến sau khi bắt đầu đổi hướng hướng bánh xe điều khiển phía trước bằng cách theo dõi góc quay của bánh xe α nhờ cảm biến, còn trong trường hợp thứ hai đồng bộ chúng, bằng cách theo dõi góc quay của tay lái bánh xe. Điều này xác định sự trễ của vô lăng điều khiển với điều khiển nối tiếp. (Hình 4.11, 4.12). Hình 4.10. Quá trình chuyển tiếp góc quay của động cơ thủy lực phản hồi Hình 4.11. Quá trình chuyển tiếp của lưu tốc dòng chảy tăng ở đầu ra của van phân phối điều khiển nối tiếp xi lanh thủy lực gấp khung khớp nối Sự trễ của vô lăng điều khiển với sự điều khiển nối tiếp có thể được nhận thấy qua các hình 4.13 ... 4.15, vị trí thể hiện các dịch chuyển và tốc độ của các thanh cán pít tong xi lanh thực hiện thủy lực. Hình 4.12. Quá trình chuyển tiếp của lưu tốc dòng chảy tăng ở đầu ra của van phân phối điều khiển song song xi lanh thủy lực gấp khung khớp nối Hình 4.13. Ti ế n b ộ chuy ể n ti ế p và t ố c độ c ủ a thanh đ i ề u hành xi lanh th ủ y l ự c quay bánh lái phía tr ướ c biến bánh lái trước và gấp CRS cho RU điều khiển tuần tự và song song"
+  }
+]
