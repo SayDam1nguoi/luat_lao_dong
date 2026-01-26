@@ -23,6 +23,16 @@ from excel_visualize import (
 
 from excel_query.excel_query import ExcelQueryHandler
 
+# 🎯 IMPORT KCN DETAIL QUERY
+try:
+    from kcn_detail_query import process_kcn_detail_query
+    KCN_DETAIL_AVAILABLE = True
+    print("✅ KCN Detail Query module loaded")
+except ImportError as e:
+    KCN_DETAIL_AVAILABLE = False
+    print(f"⚠️ KCN Detail Query not available: {e}")
+    def process_kcn_detail_query(*args, **kwargs):
+        return None
 
 # ===============================
 # Import Chatbot từ app.py
@@ -119,6 +129,12 @@ app_fastapi.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# ---------------------------------------
+# 🎨 Mount Static Files và Templates
+# ---------------------------------------
+# app_fastapi.mount("/static", StaticFiles(directory="static"), name="static")
+# templates = Jinja2Templates(directory="templates")
 
 # ---------------------------------------
 # 2️⃣ Init ExcelQueryHandler (KCN/CCN)
@@ -261,7 +277,32 @@ async def predict(data: Question, request: Request):
             }
 
         # ===============================
-        # 3️⃣ EXCEL KCN/CCN (BẢNG + TỌA ĐỘ) - ƯU TIÊN TRƯỚC LLM
+        # 3️⃣ KCN DETAIL QUERY - ƯU TIÊN CAO
+        # ===============================
+        if KCN_DETAIL_AVAILABLE:
+            llm = app.llm if CHATBOT_AVAILABLE and hasattr(app, 'llm') else None
+            embedding = app.emb if CHATBOT_AVAILABLE and hasattr(app, 'emb') else None
+            
+            kcn_detail_result = process_kcn_detail_query(question, llm=llm, embedding=embedding)
+            if kcn_detail_result:
+                if kcn_detail_result["type"] == "kcn_detail":
+                    # Tạo response với thông tin chi tiết, tọa độ chính xác và RAG analysis
+                    return {
+                        "answer": kcn_detail_result,
+                        "type": "kcn_detail", 
+                        "requires_contact": False,
+                        "session_id": session
+                    }
+                elif kcn_detail_result["type"] == "kcn_detail_not_found":
+                    return {
+                        "answer": kcn_detail_result["message"],
+                        "type": "text",
+                        "requires_contact": False,
+                        "session_id": session
+                    }
+
+        # ===============================
+        # 4️⃣ EXCEL KCN/CCN (BẢNG + TỌA ĐỘ) - ƯU TIÊN TRƯỚC LLM
         # ===============================
         handled, excel_payload = await run_in_threadpool(
             excel_kcn_handler.process_query,
@@ -298,7 +339,7 @@ async def predict(data: Question, request: Request):
                         })
 
             province = excel_obj.get("province") if isinstance(excel_obj, dict) else None
-
+            
             if province and province != "TOÀN QUỐC":
                 map_intent = {
                     "type": "province",
@@ -322,7 +363,7 @@ async def predict(data: Question, request: Request):
             }
 
         # ===============================
-        # 4️⃣ FALLBACK: gọi chatbot thật (RAG/PDF pipeline)
+        # 5️⃣ FALLBACK: gọi chatbot thật (RAG/PDF pipeline)
         # ===============================
         if CHATBOT_AVAILABLE and hasattr(app, "chatbot") and hasattr(app.chatbot, "invoke"):
             try:
@@ -345,6 +386,7 @@ async def predict(data: Question, request: Request):
                 else:
                     answer = f"Lỗi: Chatbot trả về định dạng không mong muốn: {repr(response)}"
 
+                # ✅ Parse flowchart JSON nếu có
                 parsed = try_parse_json_string(answer)
                 if isinstance(parsed, dict) and parsed.get("type") == "flowchart":
                     return {
@@ -372,7 +414,7 @@ async def predict(data: Question, request: Request):
             )
 
         # ===============================
-        # 5️⃣ Nếu người dùng gửi phone ngay từ đầu (tuỳ chọn)
+        # 6️⃣ Nếu người dùng gửi phone ngay từ đầu (tuỳ chọn)
         # ===============================
         if data.phone and SHEET_AVAILABLE and CHATBOT_AVAILABLE:
             try:
@@ -399,7 +441,7 @@ async def predict(data: Question, request: Request):
 
 
 # ---------------------------------------
-# 5️⃣ Route: /submit-contact (POST)
+# 6️⃣ Route: /submit-contact (POST)
 # ---------------------------------------
 @app_fastapi.post("/submit-contact", summary="Gửi thông tin liên hệ sau khi chatbot yêu cầu")
 async def submit_contact(data: ContactInfo):
@@ -434,7 +476,7 @@ async def submit_contact(data: ContactInfo):
 
 
 # ---------------------------------------
-# 6️⃣ Route: /status (GET)
+# 7️⃣ Route: /status (GET)
 # ---------------------------------------
 @app_fastapi.get("/status", summary="Kiểm tra trạng thái chi tiết của hệ thống")
 async def get_status():
@@ -473,8 +515,18 @@ async def get_status():
         "geojson_file": GEOJSON_IZ_PATH
     }
 
-# Điền ra cuộc lịch sử hội thoại
+# ---------------------------------------
+# 8️⃣ Route: /chatbot (POST) - Alias cho /chat  
+# ---------------------------------------
+@app_fastapi.post("/chatbot", summary="API cho chatbot trong interactive map")
+async def chatbot_for_map(data: Question, request: Request):
+    """API tương thích với chatbot trong interactive_satellite_map.html"""
+    # Chỉ cần gọi lại hàm predict (route /chat)
+    return await predict(data, request)
 
+# ---------------------------------------
+# 9️⃣ Route: /history/{session_id} (GET) - Lấy lịch sử hội thoại
+# ---------------------------------------
 @app_fastapi.get("/history/{session_id}", summary="Lấy lịch sử hội thoại")
 async def get_chat_history(session_id: str):
     if not CHATBOT_AVAILABLE:
@@ -499,7 +551,7 @@ async def get_chat_history(session_id: str):
         raise HTTPException(status_code=500, detail=str(e))
 
 # ---------------------------------------
-# 7️⃣ Run server
+# 🔟 Run server
 # ---------------------------------------
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
