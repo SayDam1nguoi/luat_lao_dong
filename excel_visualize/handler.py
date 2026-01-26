@@ -14,8 +14,12 @@ from .chart import (
 from excel_query.excel_query import ExcelQueryHandler
 from pathlib import Path
 import os
+import json
+import re
+import unicodedata
+from typing import Optional, Dict
 
-# 🎯 IMPORT PROVINCE ZOOM HANDLER từ main hoặc main_local
+# 🎯 IMPORT KCN DETAIL QUERY
 try:
     from kcn_detail_query import process_kcn_detail_query
     KCN_DETAIL_AVAILABLE = True
@@ -25,14 +29,152 @@ except ImportError as e:
     print(f"⚠️ KCN Detail Query not available: {e}")
     def process_kcn_detail_query(*args, **kwargs):
         return None
-def get_province_zoom_info(province_name: str):
-    """Import province zoom handler từ main.py (unified server)"""
-    try:
-        from main import get_province_zoom_info as _get_zoom
-        return _get_zoom(province_name)
-    except ImportError as e:
-        print(f"⚠️ Province zoom không khả dụng cho {province_name}: {e}")
+
+# ===============================
+# Province Zoom Handler - Di chuyển từ main.py
+# ===============================
+class ProvinceZoomHandler:
+    def __init__(self, geojson_path: str = "map_ui/vn_provinces_34.geojson"):
+        self.geojson_path = geojson_path
+        self.provinces_data = None
+        self.load_provinces_data()
+    
+    def load_provinces_data(self):
+        """Load dữ liệu tỉnh thành từ geojson file"""
+        try:
+            geojson_file = Path(self.geojson_path)
+            if not geojson_file.exists():
+                print(f"⚠️ Không tìm thấy file: {self.geojson_path}")
+                return
+                
+            with open(geojson_file, 'r', encoding='utf-8') as f:
+                self.provinces_data = json.load(f)
+            
+            print(f"✅ Đã load {len(self.provinces_data['features'])} tỉnh thành từ {self.geojson_path}")
+            
+        except Exception as e:
+            print(f"❌ Lỗi load provinces data: {e}")
+            self.provinces_data = None
+    
+    def normalize_name(self, name: str) -> str:
+        """Chuẩn hóa tên tỉnh để so sánh"""
+        if not name:
+            return ""
+        
+        # Loại bỏ dấu tiếng Việt và ký tự đặc biệt
+        normalized = unicodedata.normalize('NFD', str(name))
+        no_accents = ''.join(c for c in normalized if unicodedata.category(c) != 'Mn')
+        
+        # Chỉ giữ lại chữ cái và số, loại bỏ "TP", "Thành phố"
+        clean = re.sub(r'[^a-zA-Z0-9]', '', no_accents)
+        clean = re.sub(r'(tp|thanhpho)', '', clean, flags=re.IGNORECASE)
+        
+        return clean.lower()
+    
+    def find_province_by_name(self, province_name: str) -> Optional[Dict]:
+        """Tìm tỉnh trong geojson data theo tên với logic matching linh hoạt"""
+        if not self.provinces_data:
+            return None
+        
+        target = self.normalize_name(province_name)
+        
+        # Thử exact match trước
+        for feature in self.provinces_data['features']:
+            properties = feature.get('properties', {})
+            name = properties.get('name', '')
+            
+            if self.normalize_name(name) == target:
+                return feature
+        
+        # Thử partial match (contains)
+        for feature in self.provinces_data['features']:
+            properties = feature.get('properties', {})
+            name = properties.get('name', '')
+            normalized_name = self.normalize_name(name)
+            
+            # Kiểm tra 2 chiều: target in name hoặc name in target
+            if target and normalized_name and (target in normalized_name or normalized_name in target):
+                return feature
+        
         return None
+    
+    def calculate_bounds(self, geometry: Dict) -> Optional[tuple]:
+        """Tính bounds (min_lng, min_lat, max_lng, max_lat) từ geometry"""
+        try:
+            coordinates = []
+            
+            if geometry['type'] == 'Polygon':
+                coordinates = geometry['coordinates'][0]
+            elif geometry['type'] == 'MultiPolygon':
+                for polygon in geometry['coordinates']:
+                    coordinates.extend(polygon[0])
+            else:
+                return None
+            
+            if not coordinates:
+                return None
+            
+            # Tính min/max lng/lat
+            lngs = [coord[0] for coord in coordinates]
+            lats = [coord[1] for coord in coordinates]
+            
+            return (min(lngs), min(lats), max(lngs), max(lats))
+            
+        except Exception as e:
+            print(f"❌ Lỗi tính bounds: {e}")
+            return None
+    
+    def get_province_zoom_bounds(self, province_name: str) -> Optional[Dict]:
+        """Lấy thông tin zoom bounds cho tỉnh"""
+        feature = self.find_province_by_name(province_name)
+        if not feature:
+            return None
+        
+        geometry = feature.get('geometry')
+        if not geometry:
+            return None
+        
+        bounds = self.calculate_bounds(geometry)
+        if not bounds:
+            return None
+        
+        min_lng, min_lat, max_lng, max_lat = bounds
+        
+        # Tính center
+        center_lng = (min_lng + max_lng) / 2
+        center_lat = (min_lat + max_lat) / 2
+        
+        # Tính zoom level dựa trên kích thước bounds
+        lng_diff = max_lng - min_lng
+        lat_diff = max_lat - min_lat
+        max_diff = max(lng_diff, lat_diff)
+        
+        # Zoom level logic - Tăng cao hơn để thấy chi tiết thành phố
+        if max_diff > 2:
+            zoom_level = 11
+        elif max_diff > 1:
+            zoom_level = 12
+        elif max_diff > 0.5:
+            zoom_level = 13
+        elif max_diff > 0.2:
+            zoom_level = 14
+        else:
+            zoom_level = 15
+        
+        return {
+            "province_name": feature['properties']['name'],
+            "bounds": bounds,
+            "center": [center_lng, center_lat],
+            "zoom_level": zoom_level,
+            "geometry": geometry
+        }
+
+# Global instance
+province_zoom_handler = ProvinceZoomHandler()
+
+def get_province_zoom_info(province_name: str) -> Optional[Dict]:
+    """Hàm tiện ích để lấy thông tin zoom province"""
+    return province_zoom_handler.get_province_zoom_bounds(province_name)
 
 # Load paths
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -99,7 +241,7 @@ def _get_province_zoom_for_data(data_list: list) -> dict:
         if not first_province:
             return None
             
-        # Lấy province zoom info
+        # Lấy province zoom info từ handler nội bộ
         zoom_info = get_province_zoom_info(first_province)
         if zoom_info:
             print(f"✅ Đã lấy province zoom cho {first_province}: zoom level {zoom_info['zoom_level']}")
