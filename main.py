@@ -516,7 +516,42 @@ async def get_status():
     }
 
 # ---------------------------------------
-# 8️⃣ Run server
+# 8️⃣ Route: /chatbot (POST) - Alias cho /chat  
+# ---------------------------------------
+@app_fastapi.post("/chatbot", summary="API cho chatbot trong interactive map")
+async def chatbot_for_map(data: Question, request: Request):
+    """API tương thích với chatbot trong interactive_satellite_map.html"""
+    # Chỉ cần gọi lại hàm predict (route /chat)
+    return await predict(data, request)
+
+# ---------------------------------------
+# 9️⃣ Route: /history/{session_id} (GET) - Lấy lịch sử hội thoại
+# ---------------------------------------
+@app_fastapi.get("/history/{session_id}", summary="Lấy lịch sử hội thoại")
+async def get_chat_history(session_id: str):
+    if not CHATBOT_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Chatbot not available")
+
+    try:
+        history = app.get_history(session_id)
+        messages = []
+
+        for m in history.messages:
+            messages.append({
+                "role": m.type,   # human / ai / system
+                "content": m.content
+            })
+
+        return {
+            "session_id": session_id,
+            "messages": messages
+        }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# ---------------------------------------
+# 🔟 Run server
 # ---------------------------------------
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
