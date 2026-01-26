@@ -66,9 +66,7 @@ llm = ChatOpenAI(
 lang_llm = ChatOpenAI(
     api_key=LANG_MODEL_API_KEY,
     model_name="gpt-4o-mini",
-    temperature=0,
-    max_tokens=4000,  # Tăng token limit
-    streaming=False   # Tắt streaming
+    temperature=0
 )
 
 # ===================== INIT EMBEDDING =====================
