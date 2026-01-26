@@ -241,9 +241,10 @@ async def predict(data: Question, request: Request):
             return {"answer": mst_answer, "requires_contact": False}
 
         # ===============================
-        # EXCEL VISUALIZE
+        # EXCEL VISUALIZE (CHỈ CHO KCN/CCN DATA)
         # ===============================
-        if is_excel_visualize_intent(question):
+        # Chỉ xử lý excel_visualize nếu câu hỏi có liên quan đến KCN/CCN
+        if is_excel_visualize_intent(question) and any(keyword in question.lower() for keyword in ['khu công nghiệp', 'kcn', 'cụm công nghiệp', 'ccn', 'công nghiệp']):
             if not CHATBOT_AVAILABLE:
                 return {
                     "answer": "Backend chưa sẵn sàng ",
@@ -251,18 +252,23 @@ async def predict(data: Question, request: Request):
                     "session_id": session
                 }
 
-            excel_result = await run_in_threadpool(
-                handle_excel_visualize,
-                message=question,
-                #excel_handler=app.excel_handler
-            )
-            return {
-                "answer": "Đây là biểu đồ do Chatiip tạo cho bạn: ",
-                "type": "excel_visualize",
-                "payload": excel_result,
-                "requires_contact": False,
-                "session_id": session
-            }
+            try:
+                excel_result = await run_in_threadpool(
+                    handle_excel_visualize,
+                    message=question,
+                    #excel_handler=app.excel_handler
+                )
+                return {
+                    "answer": "Đây là biểu đồ do Chatiip tạo cho bạn: ",
+                    "type": "excel_visualize",
+                    "payload": excel_result,
+                    "requires_contact": False,
+                    "session_id": session
+                }
+            except Exception as e:
+                print(f"⚠️ [LOCAL] Excel visualize error: {e}")
+                # Fallback to normal chatbot if excel_visualize fails
+                pass
 
         # ===============================
         # 1️⃣ EXCEL KCN/CCN (BẢNG + TỌA ĐỘ) - ƯU TIÊN TRƯỚC LLM
@@ -473,7 +479,42 @@ async def get_status():
     }
 
 # ---------------------------------------
-# 7️⃣ Run local server
+# 7️⃣ Route: /chatbot (POST) - Alias cho /chat
+# ---------------------------------------
+@app_fastapi.post("/chatbot", summary="API cho chatbot trong interactive map")
+async def chatbot_for_map(data: Question, request: Request):
+    """API tương thích với chatbot trong interactive_satellite_map.html"""
+    # Chỉ cần gọi lại hàm predict (route /chat)
+    return await predict(data, request)
+
+# ---------------------------------------
+# 8️⃣ Route: /history/{session_id} (GET) - Lấy lịch sử hội thoại
+# ---------------------------------------
+@app_fastapi.get("/history/{session_id}", summary="Lấy lịch sử hội thoại")
+async def get_chat_history(session_id: str):
+    if not CHATBOT_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Chatbot not available")
+
+    try:
+        history = app.get_history(session_id)
+        messages = []
+
+        for m in history.messages:
+            messages.append({
+                "role": m.type,   # human / ai / system
+                "content": m.content
+            })
+
+        return {
+            "session_id": session_id,
+            "messages": messages
+        }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# ---------------------------------------
+# 9️⃣ Run local server
 # ---------------------------------------
 if __name__ == "__main__":
     # ✅ Local test: bind 127.0.0.1 để Postman dùng localhost/127.0.0.1
