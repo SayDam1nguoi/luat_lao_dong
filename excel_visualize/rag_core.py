@@ -43,11 +43,15 @@ class ExcelQueryAgent:
             else:
                 self.df["Area_num"] = None
             
-        self.llm = ChatOpenAI(
-            model="gpt-3.5-turbo", 
-            temperature=0, 
-            api_key=OPENAI_API_KEY
-        )
+        try:
+            self.llm = ChatOpenAI(
+                model="gpt-3.5-turbo", 
+                temperature=0, 
+                api_key=OPENAI_API_KEY
+            )
+        except Exception as e:
+            print(f"⚠️ Cannot initialize LLM for excel_visualize: {e}")
+            self.llm = None
         
         if not self.df.empty and "Tỉnh/Thành phố" in self.df.columns:
             self.provinces_list = self.df["Tỉnh/Thành phố"].dropna().unique().tolist()
@@ -94,6 +98,10 @@ class ExcelQueryAgent:
         """
         if self.df.empty:
              return {"filter_type": "error", "message": "Chưa load được dữ liệu Excel."}
+
+        # Fallback khi không có LLM
+        if not self.llm:
+            return self._retrieve_filters_fallback(user_query)
 
         parser = JsonOutputParser()
         provinces_str = ", ".join([str(p) for p in self.provinces_list])
@@ -230,6 +238,66 @@ class ExcelQueryAgent:
         except Exception as e:
             print(f"❌ Query Error: {e}")
             return {"filter_type": "error", "message": str(e)}
+
+    def _retrieve_filters_fallback(self, user_query: str) -> Dict[str, Any]:
+        """
+        Fallback method khi không có LLM - sử dụng keyword matching
+        """
+        query_lower = user_query.lower()
+        
+        # 1. Xác định target_type
+        if any(word in query_lower for word in ["cụm", "ccn"]):
+            target_type = "Cụm công nghiệp"
+            type_mask = self.df["Loại_norm"].str.contains("cụm|ccn", na=False)
+        else:
+            target_type = "Khu công nghiệp"
+            type_mask = self.df["Loại_norm"].str.contains("khu|kcn", na=False)
+        
+        df_filtered = self.df[type_mask].copy()
+        
+        # 2. Xác định visualization_metric
+        if any(word in query_lower for word in ["giá", "tiền", "usd", "thuê"]):
+            visualization_metric = "price"
+        elif any(word in query_lower for word in ["diện tích", "rộng", "quy mô", "ha"]):
+            visualization_metric = "area"
+        else:
+            visualization_metric = "dual"
+        
+        # 3. Xác định chart_type
+        if any(word in query_lower for word in ["tròn", "cơ cấu", "tỷ lệ", "bánh"]):
+            chart_type = "pie"
+        elif any(word in query_lower for word in ["đường", "xu hướng", "biến thiên"]):
+            chart_type = "line"
+        elif any(word in query_lower for word in ["ngang", "thanh ngang"]):
+            chart_type = "barh"
+        else:
+            chart_type = "bar"
+        
+        # 4. Tìm tỉnh trong query
+        found_province = None
+        for province in self.provinces_list:
+            if province.lower() in query_lower:
+                found_province = province
+                break
+        
+        # 5. Lọc theo tỉnh nếu tìm thấy
+        if found_province:
+            mask = df_filtered["Tỉnh/Thành phố"].astype(str) == found_province
+            df_filtered = df_filtered[mask]
+            filter_type = "province"
+            search_keywords = [found_province]
+        else:
+            # Không tìm thấy tỉnh cụ thể, lấy tất cả
+            filter_type = "specific_zones"
+            search_keywords = []
+        
+        return {
+            "industrial_type": target_type,
+            "filter_type": filter_type,
+            "visualization_metric": visualization_metric,
+            "chart_type": chart_type,
+            "data": df_filtered
+        }
 
 # Export
 rag_agent = ExcelQueryAgent()

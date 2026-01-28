@@ -23,16 +23,10 @@ from excel_visualize import (
 
 from excel_query.excel_query import ExcelQueryHandler
 
-# 🎯 IMPORT KCN DETAIL QUERY
-try:
-    from kcn_detail_query import process_kcn_detail_query
-    KCN_DETAIL_AVAILABLE = True
-    print("✅ KCN Detail Query module loaded")
-except ImportError as e:
-    KCN_DETAIL_AVAILABLE = False
-    print(f"⚠️ KCN Detail Query not available: {e}")
-    def process_kcn_detail_query(*args, **kwargs):
-        return None
+# 🎯 IMPORT KCN DETAIL QUERY - INTEGRATED INTO EXCEL_QUERY
+# KCN Detail Query functionality is now integrated into excel_query module
+KCN_DETAIL_AVAILABLE = True
+print("✅ KCN Detail Query integrated into excel_query module")
 
 # ===============================
 # Import Chatbot từ app.py
@@ -41,6 +35,7 @@ try:
     import app  # app.py: LangChain chatbot + vectordb + llm + emb + excel_handler + sheet funcs
     CHATBOT_AVAILABLE = True
     print("✅ Đã import thành công module 'app'")
+    
 except ImportError as e:
     app = None
     CHATBOT_AVAILABLE = False
@@ -146,8 +141,20 @@ GEOJSON_IZ_PATH = str(BASE_DIR / "map_ui" / "industrial_zones.geojson")
 
 excel_kcn_handler = ExcelQueryHandler(
     excel_path=EXCEL_FILE_PATH,
-    geojson_path=GEOJSON_IZ_PATH
+    geojson_path=GEOJSON_IZ_PATH,
+    llm=None  # Sẽ được set sau khi import app
 )
+
+# ===============================
+# Cấu hình LLM cho excel_kcn_handler sau khi import app
+# ===============================
+if CHATBOT_AVAILABLE and app:
+    try:
+        if hasattr(app, 'llm'):
+            excel_kcn_handler.llm = app.llm
+            print("✅ Đã cấu hình LLM cho excel_kcn_handler")
+    except Exception as e:
+        print(f"⚠️ Lỗi khi cấu hình LLM cho excel_kcn_handler: {e}")
 
 
 # ---------------------------------------
@@ -277,29 +284,54 @@ async def predict(data: Question, request: Request):
             }
 
         # ===============================
-        # 3️⃣ KCN DETAIL QUERY - ƯU TIÊN CAO
+        # 3️⃣ KCN DETAIL QUERY - ƯU TIÊN CAO (INTEGRATED INTO EXCEL_QUERY)
         # ===============================
-        if KCN_DETAIL_AVAILABLE:
-            llm = app.llm if CHATBOT_AVAILABLE and hasattr(app, 'llm') else None
-            embedding = app.emb if CHATBOT_AVAILABLE and hasattr(app, 'emb') else None
-            
-            kcn_detail_result = process_kcn_detail_query(question, llm=llm, embedding=embedding)
-            if kcn_detail_result:
-                if kcn_detail_result["type"] == "kcn_detail":
-                    # Tạo response với thông tin chi tiết, tọa độ chính xác và RAG analysis
-                    return {
-                        "answer": kcn_detail_result,
-                        "type": "kcn_detail", 
-                        "requires_contact": False,
-                        "session_id": session
-                    }
-                elif kcn_detail_result["type"] == "kcn_detail_not_found":
-                    return {
-                        "answer": kcn_detail_result["message"],
-                        "type": "text",
-                        "requires_contact": False,
-                        "session_id": session
-                    }
+        if KCN_DETAIL_AVAILABLE and excel_kcn_handler:
+            # Kiểm tra xem có phải câu hỏi về KCN/CCN cụ thể không
+            if excel_kcn_handler.is_kcn_detail_query(question):
+                print(f"🎯 Detected KCN Detail Query: {question}")
+                
+                # Sử dụng chức năng detail query với multiple choice support
+                kcn_detail_result = excel_kcn_handler.process_kcn_detail_query_with_multiple_choice(question)
+                if kcn_detail_result:
+                    if kcn_detail_result["type"] == "kcn_detail":
+                        # Tạo response với thông tin chi tiết, tọa độ chính xác và RAG analysis
+                        return {
+                            "answer": kcn_detail_result,
+                            "type": "kcn_detail", 
+                            "requires_contact": False,
+                            "session_id": session
+                        }
+                    elif kcn_detail_result["type"] == "kcn_multiple_choice":
+                        # Xử lý multiple choice - tạo message với danh sách lựa chọn
+                        options = kcn_detail_result.get("options", [])
+                        message_lines = [kcn_detail_result.get("message", "")]
+                        message_lines.append("")  # Dòng trống
+                        
+                        for i, option in enumerate(options):
+                            display_text = option.get("display_text", "N/A")
+                            message_lines.append(f"{i+1}. {display_text}")
+                        
+                        message_lines.append("")
+                        message_lines.append("Vui lòng gửi số thứ tự (ví dụ: '1', '2', '3'...) để xem thông tin chi tiết.")
+                        
+                        full_message = "\n".join(message_lines)
+                        
+                        return {
+                            "answer": full_message,
+                            "type": "text",
+                            "requires_contact": False,
+                            "session_id": session,
+                            # Lưu thông tin để xử lý lựa chọn sau
+                            "_kcn_choice_data": kcn_detail_result
+                        }
+                    elif kcn_detail_result["type"] == "kcn_detail_not_found":
+                        return {
+                            "answer": kcn_detail_result["message"],
+                            "type": "text",
+                            "requires_contact": False,
+                            "session_id": session
+                        }
 
         # ===============================
         # 4️⃣ EXCEL KCN/CCN (BẢNG + TỌA ĐỘ) - ƯU TIÊN TRƯỚC LLM

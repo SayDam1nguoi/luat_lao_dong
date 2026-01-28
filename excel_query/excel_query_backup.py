@@ -30,7 +30,8 @@ class ExcelQueryHandler:
         excel_path: str,
         geojson_path: Optional[str] = None,
         match_threshold: int = 82,
-        llm=None
+        llm=None,
+        embedding=None
     ):
         """
         Khởi tạo handler với đường dẫn file Excel
@@ -40,10 +41,12 @@ class ExcelQueryHandler:
             geojson_path: (tuỳ chọn) Đường dẫn industrial_zones.geojson để gắn tọa độ
             match_threshold: ngưỡng match tên (RapidFuzz) để chấp nhận tọa độ
             llm: Language model để xử lý prompt-based (BẮT BUỘC)
+            embedding: Embedding model cho RAG enhancement
         """
         self.excel_path = excel_path
         self.df: Optional[pd.DataFrame] = None
         self.llm = llm
+        self.embedding = embedding
 
         if not self.llm:
             print("⚠️ WARNING: Hệ thống prompt-based cần LLM. Sẽ fallback về keyword nếu cần.")
@@ -1029,12 +1032,133 @@ CHỈ TRẢ VỀ MỘT TRONG HAI:
         return response
 
     # ==========================================================
-    # 🆕 IMPROVED KCN DETAIL QUERY WITH MULTIPLE CHOICE SUPPORT
+    # 🤖 RAG ENHANCEMENT FOR DETAIL QUERIES
     # ==========================================================
-    
-    def is_kcn_detail_query(self, question: str) -> bool:
+    def _enhance_with_rag(self, kcn_info: Dict, question: str) -> str:
         """
-        Kiểm tra xem câu hỏi có phải là tra cứu chi tiết KCN/CCN không
+        Sử dụng RAG để bổ sung thông tin chi tiết về KCN
+        
+        Args:
+            kcn_info: Thông tin structured từ Excel
+            question: Câu hỏi gốc của user
+            
+        Returns:
+            Enhanced description từ RAG system
+        """
+        if not self.llm:
+            return ""
+        
+        try:
+            # Tạo context từ structured data
+            kcn_name = kcn_info.get('Tên', 'N/A')
+            kcn_address = kcn_info.get('Địa chỉ', 'N/A')
+            kcn_province = kcn_info.get('Tỉnh/Thành phố', 'N/A')
+            kcn_area = kcn_info.get('Tổng diện tích', 'N/A')
+            kcn_industries = kcn_info.get('Ngành nghề', 'N/A')
+            
+            # Tạo enhanced query cho RAG
+            rag_query = f"""
+            Hãy cung cấp thông tin chi tiết và phân tích về {kcn_name} tại {kcn_province}.
+            
+            Thông tin cơ bản đã có:
+            - Tên: {kcn_name}
+            - Địa chỉ: {kcn_address}
+            - Tỉnh/Thành phố: {kcn_province}
+            - Diện tích: {kcn_area}
+            - Ngành nghề: {kcn_industries[:200]}...
+            
+            Câu hỏi gốc: {question}
+            
+            Hãy bổ sung thêm:
+            1. Phân tích vị trí địa lý và lợi thế
+            2. Đánh giá tiềm năng phát triển
+            3. So sánh với các KCN khác trong khu vực
+            4. Thông tin về hạ tầng và dịch vụ
+            5. Các chính sách ưu đãi đặc biệt
+            
+            Trả lời một cách chi tiết và chuyên nghiệp.
+            """
+            
+            # Gọi RAG system
+            if hasattr(self.llm, 'invoke'):
+                rag_response = self.llm.invoke(rag_query)
+                if isinstance(rag_response, str):
+                    return rag_response
+                elif hasattr(rag_response, 'content'):
+                    return rag_response.content
+                else:
+                    return str(rag_response)
+            
+            return ""
+            
+        except Exception as e:
+            print(f"⚠️ RAG enhancement error: {e}")
+            return ""
+
+    def is_choice_selection_query(self, question: str) -> bool:
+        """
+        Kiểm tra xem câu hỏi có phải là lựa chọn số từ danh sách multiple choice không
+        
+        Patterns:
+        - "1", "2", "3"... (chỉ có số)
+        - "Chọn 1", "Tôi chọn 2"
+        - "Option 1", "Lựa chọn 2"
+        """
+        question_clean = question.strip().lower()
+        
+        # Pattern 1: Chỉ có số
+        if question_clean.isdigit():
+            return True
+        
+        # Pattern 2: Có từ khóa chọn + số
+        choice_patterns = [
+            r'chọn\s+(\d+)',
+            r'lựa chọn\s+(\d+)', 
+            r'option\s+(\d+)',
+            r'tôi chọn\s+(\d+)',
+            r'số\s+(\d+)'
+        ]
+        
+        for pattern in choice_patterns:
+            if re.search(pattern, question_clean):
+                return True
+        
+        return False
+
+    def extract_choice_number(self, question: str) -> Optional[int]:
+        """
+        Trích xuất số lựa chọn từ câu hỏi
+        """
+        question_clean = question.strip().lower()
+        
+        # Pattern 1: Chỉ có số
+        if question_clean.isdigit():
+            return int(question_clean)
+        
+        # Pattern 2: Có từ khóa chọn + số
+        choice_patterns = [
+            r'chọn\s+(\d+)',
+            r'lựa chọn\s+(\d+)', 
+            r'option\s+(\d+)',
+            r'tôi chọn\s+(\d+)',
+            r'số\s+(\d+)'
+        ]
+        
+        for pattern in choice_patterns:
+            match = re.search(pattern, question_clean)
+            if match:
+                return int(match.group(1))
+        
+        return None
+
+    def is_kcn_detail_query(self, question: str) -> bool:
+        - "cho tôi biết về CCN XYZ" (có tên cụ thể)
+        - "KCN ABC ở đâu" (có tên cụ thể)
+        - "Detail KCN ABC" (có từ Detail)
+        
+        KHÔNG PHẢI:
+        - "cho tôi các khu công nghiệp ở Thanh Hóa" (query tổng quát theo tỉnh)
+        - "danh sách KCN ở Bắc Ninh" (query danh sách)
         """
         question_lower = question.lower().strip()
         
@@ -1122,365 +1246,27 @@ CHỈ TRẢ VỀ MỘT TRONG HAI:
         
         return result
 
-    def process_kcn_detail_query_with_multiple_choice(self, question: str) -> Optional[Dict]:
-        """
-        Xử lý câu hỏi tra cứu chi tiết KCN/CCN với hỗ trợ multiple choice
-        
-        Returns:
-            - Nếu có 1 kết quả: {"type": "kcn_detail", "kcn_info": {...}, ...}
-            - Nếu có nhiều kết quả: {"type": "kcn_multiple_choice", "options": [...], ...}
-            - Nếu không tìm thấy: {"type": "kcn_detail_not_found", "message": "..."}
-        """
-        print(f"🔍 Processing KCN detail query: {question}")
-        
-        if not self.is_kcn_detail_query(question):
-            print("❌ Not a KCN detail query")
-            return None
-        
-        # Sử dụng LLM để phân tích và trích xuất tên KCN
-        specific_name = None
-        query_type = None
-        
-        if self.llm:
-            print("🤖 Using LLM for analysis")
-            analysis = self._analyze_query_with_llm(question)
-            
-            if not analysis.get("is_industrial_query", False):
-                print("❌ LLM says not industrial query")
-                return None
-            
-            if analysis.get("search_type") == "specific_name":
-                specific_name = analysis.get("specific_name")
-                query_type = analysis.get("query_type")
-                print(f"🎯 LLM extracted: {specific_name}, type: {query_type}")
-        
-        # Fallback: extract name manually when no LLM or LLM failed
-        if not specific_name:
-            print("🔧 Using fallback extraction")
-            specific_name = self._extract_kcn_name_fallback(question)
-            query_type = None  # Let query_by_specific_name handle this
-            print(f"🎯 Fallback extracted: {specific_name}")
-        
-        if not specific_name:
-            print("❌ Could not extract KCN name")
-            return None
-        
-        # Tìm thông tin KCN từ structured data
-        print(f"🔍 Searching for: {specific_name}")
-        df_result = self.query_by_specific_name(specific_name, query_type)
-        
-        if df_result is None or df_result.empty:
-            print(f"❌ No results found for: {specific_name}")
-            return {
-                "type": "kcn_detail_not_found",
-                "message": f"Không tìm thấy thông tin về '{specific_name}'. Vui lòng kiểm tra lại tên hoặc thử tìm kiếm với từ khóa khác.",
-                "query_name": specific_name
-            }
-        
-        print(f"✅ Found {len(df_result)} results")
-        
-        # 🆕 KIỂM TRA NHIỀU KẾT QUẢ TRÙNG TÊN
-        if len(df_result) > 1:
-            print(f"🔀 Multiple results found, creating choice list")
-            return self._create_multiple_choice_response(df_result, specific_name, query_type)
-        
-        # Chỉ có 1 kết quả - trả về chi tiết như cũ
-        return self._create_single_kcn_detail_response(df_result.iloc[0], specific_name, question)
-
-    def _create_single_kcn_detail_response(self, row, specific_name: str, question: str) -> Dict:
-        """
-        Tạo response cho 1 KCN duy nhất
-        """
-        cols = self.columns_map
-        
-        kcn_info = {
-            "Tên": str(row.get(cols["name"], "")),
-            "Địa chỉ": str(row.get(cols["address"], "")),
-            "Tỉnh/Thành phố": str(row.get(cols["province"], "")),
-            "Loại": str(row.get(cols["type"], "")),
-            "Tổng diện tích": str(row.get(cols["area"], "")),
-            "Giá thuê đất": str(row.get(cols["rental_price"], "")),
-            "Thời gian vận hành": str(row.get(cols["operation_time"], "")),
-            "Ngành nghề": str(row.get(cols["industry"], "")),
-        }
-        
-        print(f"📋 KCN Info: {kcn_info['Tên']}")
-        
-        # Tìm tọa độ
-        coordinates = self._match_coordinates(kcn_info["Tên"])
-        print(f"📍 Coordinates: {coordinates}")
-        
-        # Enhance với RAG
-        rag_analysis = self._enhance_with_rag(kcn_info, question)
-        
-        result = {
-            "type": "kcn_detail",
-            "kcn_info": kcn_info,
-            "coordinates": coordinates,
-            "zoom_level": 16,  # Zoom rất gần để thấy chi tiết vị trí
-            "matched_name": kcn_info["Tên"],
-            "query_name": specific_name,
-            "message": f"Thông tin chi tiết về {kcn_info['Tên']}"
-        }
-        
-        # Thêm RAG analysis nếu có
-        if rag_analysis:
-            result["rag_analysis"] = rag_analysis
-            result["has_rag"] = True
-            print("✅ Added RAG analysis")
-        else:
-            result["has_rag"] = False
-            print("⚠️ No RAG analysis")
-        
-        print("✅ KCN detail query processed successfully")
-        return result
-
-    def _extract_kcn_name_fallback(self, question: str) -> Optional[str]:
-        """
-        Fallback method để trích xuất tên KCN/CCN khi không có LLM
-        """
-        import re
-        
-        question_clean = question.strip()
-        
-        # Pattern đặc biệt cho "Detail KCN/CCN [tên]"
-        detail_match = re.search(r'detail\s+(kcn|ccn|khu công nghiệp|cụm công nghiệp)\s+(.+?)(?:\s*$|\s*\?)', question_clean, re.IGNORECASE)
-        if detail_match:
-            kcn_type = detail_match.group(1).lower()
-            kcn_name = detail_match.group(2).strip()
-            if kcn_type in ['kcn', 'khu công nghiệp']:
-                return f"khu công nghiệp {kcn_name}"
-            else:
-                return f"cụm công nghiệp {kcn_name}"
-        
-        # Pattern 1: "về [tên KCN]"
-        match = re.search(r'về\s+(.+?)(?:\s*$|\s*\?)', question_clean, re.IGNORECASE)
-        if match:
-            return match.group(1).strip()
-        
-        # Pattern 2: Chỉ có "KCN/CCN + tên" (pattern đơn giản)
-        simple_patterns = [
-            r'^(khu công nghiệp|kcn)\s+(.+?)(?:\s*$|\s*\?)',
-            r'^(cụm công nghiệp|ccn)\s+(.+?)(?:\s*$|\s*\?)'
-        ]
-        
-        for pattern in simple_patterns:
-            match = re.search(pattern, question_clean, re.IGNORECASE)
-            if match:
-                kcn_type = match.group(1).lower()
-                kcn_name = match.group(2).strip()
-                return f"{kcn_type} {kcn_name}"
-        
-        # Pattern 3: Tìm tên có chứa KCN/CCN keywords trong câu
-        kcn_patterns = [
-            r'(khu công nghiệp[\w\s\-]+?)(?:\s*$|\s*\?|ở|tại)',
-            r'(kcn[\w\s\-]+?)(?:\s*$|\s*\?|ở|tại)',
-            r'(cụm công nghiệp[\w\s\-]+?)(?:\s*$|\s*\?|ở|tại)',
-            r'(ccn[\w\s\-]+?)(?:\s*$|\s*\?|ở|tại)'
-        ]
-        
-        for pattern in kcn_patterns:
-            match = re.search(pattern, question_clean, re.IGNORECASE)
-            if match:
-                return match.group(1).strip()
-        
-        return None
-
-    def _create_multiple_choice_response(self, df_result: pd.DataFrame, specific_name: str, query_type: Optional[str]) -> Dict:
-        """
-        Tạo response khi có nhiều KCN/CCN trùng tên để người dùng lựa chọn
-        """
-        cols = self.columns_map
-        options = []
-        
-        for idx, row in df_result.iterrows():
-            kcn_name = str(row.get(cols["name"], ""))
-            kcn_province = str(row.get(cols["province"], ""))
-            kcn_address = str(row.get(cols["address"], ""))
-            kcn_type = str(row.get(cols["type"], ""))
-            
-            # Tìm tọa độ cho từng option
-            coordinates = self._match_coordinates(kcn_name)
-            
-            option = {
-                "id": idx,  # ID để người dùng chọn
-                "name": kcn_name,
-                "province": kcn_province,
-                "address": kcn_address,
-                "type": kcn_type,
-                "coordinates": coordinates,
-                "display_text": f"{kcn_name} - {kcn_province}"
-            }
-            options.append(option)
-        
-        # Tạo message thông báo
-        if query_type == "KCN":
-            type_label = "khu công nghiệp"
-        elif query_type == "CCN":
-            type_label = "cụm công nghiệp"
-        else:
-            type_label = "khu/cụm công nghiệp"
-        
-        message = f"Tìm thấy {len(options)} {type_label} có tên tương tự '{specific_name}'. Vui lòng chọn một trong các tùy chọn sau:"
-        
-        return {
-            "type": "kcn_multiple_choice",  # Thay đổi type để main.py xử lý
-            "options": options,
-            "message": message,
-            "query_name": specific_name,
-            "total_options": len(options)
-        }
-
-    def _enhance_with_rag(self, kcn_info: Dict, question: str) -> str:
-        """
-        Sử dụng RAG để bổ sung thông tin chi tiết về KCN (simplified version)
-        """
-        if not self.llm:
-            return ""
-        
-        try:
-            # Tạo context từ structured data
-            kcn_name = kcn_info.get('Tên', 'N/A')
-            kcn_address = kcn_info.get('Địa chỉ', 'N/A')
-            kcn_province = kcn_info.get('Tỉnh/Thành phố', 'N/A')
-            
-            # Tạo enhanced query cho RAG
-            rag_query = f"Hãy cung cấp thông tin chi tiết về {kcn_name} tại {kcn_province}. Địa chỉ: {kcn_address}"
-            
-            # Gọi RAG system
-            if hasattr(self.llm, 'invoke'):
-                rag_response = self.llm.invoke(rag_query)
-                if isinstance(rag_response, str):
-                    return rag_response
-                elif hasattr(rag_response, 'content'):
-                    return rag_response.content
-                else:
-                    return str(rag_response)
-            
-            return ""
-            
-        except Exception as e:
-            print(f"⚠️ RAG enhancement error: {e}")
-            return ""
-
-
-# ==========================================================
-# 🔌 TÍCH HỢP VÀO CHATBOT
-# ==========================================================
-def integrate_excel_to_chatbot(excel_path: str, geojson_path: Optional[str] = None, llm=None):
-    """Tích hợp module Excel vào chatbot"""
-    if not Path(excel_path).exists():
-        print(f"❌ Không tìm thấy file Excel: {excel_path}")
-        return None
-    handler = ExcelQueryHandler(excel_path, geojson_path=geojson_path, llm=llm)
-    print("✅ Đã tích hợp module truy vấn Excel với LLM support.")
-    return handler
-
-
-# ==========================================================
-# 🧪 TEST MODULE
-# ==========================================================
-if __name__ == "__main__":
-    EXCEL_FILE = r"./data/IIPMap_FULL_63_COMPLETE.xlsx"
-    GEOJSON_FILE = r"./map_ui/industrial_zones.geojson"  
-
-    # Khởi tạo LLM cho test
-    try:
-        from langchain_openai import ChatOpenAI
-        test_llm = ChatOpenAI(
-            model_name="gpt-4o-mini",
-            temperature=0
-        )
-        print("✅ LLM initialized for testing")
-    except:
-        test_llm = None
-        print("⚠️ LLM not available for testing")
-
-    handler = ExcelQueryHandler(EXCEL_FILE, geojson_path=GEOJSON_FILE, llm=test_llm)
-
-    test_queries = [
-        "Danh sách cụm công nghiệp ở Bắc Ninh",
-        "Danh sách khu công nghiệp ở Bắc Ninh",
-        "Danh sách khu và cụm công nghiệp ở Bắc Ninh",
-        "Danh sách tất cả khu công nghiệp và cụm công nghiệp ở Hà Nội",
-        "Vẽ biểu đồ cột về diện tích của khu công nghiệp ở Hồ Chí Minh",
-        "Vẽ biểu đồ cột về diện tích của cụm công nghiệp ở Đà Nẵng",
-        "Vẽ biểu đồ cột về diện tích của cả khu và cụm công nghiệp ở Bình Dương",
-        "Khu và cụm công nghiệp tỉnh Lai Châu",  # Test tỉnh không có dữ liệu
-        "Danh sách khu công nghiệp ở Điện Biên",  # Test tỉnh không có dữ liệu
-        # Test specific name searches
-        "cho tôi thông tin về KHU CÔNG NGHIỆP NGŨ LẠC - VĨNH LONG",
-        "thông tin về khu công nghiệp Sóng Thần",
-        "tìm cụm công nghiệp Tân Bình",
-        "KHU CÔNG NGHIỆP VSIP BẮC NINH",
-        "cụm công nghiệp Phú Mỹ"
-    ]
-
-    print("\n" + "=" * 80)
-    print("TEST MODULE TRẢ KẾT QUẢ DẠNG JSON (CÓ TỌA ĐỘ + LLM SMART CHECK)")
-    print("=" * 80)
-
-    for query in test_queries:
-        print(f"\n❓ {query}")
-        handled, response = handler.process_query(query, return_json=True)
-        if handled:
-            print(response)
-        else:
-            print("⏭️ Bỏ qua - Không phải câu hỏi liệt kê KCN/CCN hoặc thiếu thông tin")
-        print("-" * 80)
-
-    # ==========================================================
-    # 🆕 MULTIPLE CHOICE SUPPORT FOR KCN DETAIL QUERIES
-    # ==========================================================
-    
-    def _create_multiple_choice_response(self, df_result: pd.DataFrame, specific_name: str, query_type: Optional[str]) -> Dict:
-        """
-        Tạo response khi có nhiều KCN/CCN trùng tên để người dùng lựa chọn
-        """
-        cols = self.columns_map
-        options = []
-        
-        for idx, row in df_result.iterrows():
-            kcn_name = str(row.get(cols["name"], ""))
-            kcn_province = str(row.get(cols["province"], ""))
-            kcn_address = str(row.get(cols["address"], ""))
-            kcn_type = str(row.get(cols["type"], ""))
-            
-            # Tìm tọa độ cho từng option
-            coordinates = self._match_coordinates(kcn_name)
-            
-            option = {
-                "id": idx,  # ID để người dùng chọn
-                "name": kcn_name,
-                "province": kcn_province,
-                "address": kcn_address,
-                "type": kcn_type,
-                "coordinates": coordinates,
-                "display_text": f"{kcn_name} - {kcn_province}"
-            }
-            options.append(option)
-        
-        # Tạo message thông báo
-        if query_type == "KCN":
-            type_label = "khu công nghiệp"
-        elif query_type == "CCN":
-            type_label = "cụm công nghiệp"
-        else:
-            type_label = "khu/cụm công nghiệp"
-        
-        message = f"Tìm thấy {len(options)} {type_label} có tên tương tự '{specific_name}'. Vui lòng chọn một trong các tùy chọn sau:"
-        
-        return {
-            "type": "kcn_multiple_choice",  # Thay đổi type để main.py xử lý
-            "options": options,
-            "message": message,
-            "query_name": specific_name,
-            "total_options": len(options)
-        }
-
     def process_kcn_detail_query(self, question: str) -> Optional[Dict]:
         """
-        Xử lý câu hỏi tra cứu chi tiết KCN/CCN với hỗ trợ multiple choice
+        Xử lý câu hỏi tra cứu chi tiết KCN/CCN với RAG enhancement
+        
+        Returns:
+            {
+                "type": "kcn_detail",
+                "kcn_info": {...},
+                "coordinates": [lng, lat],
+                "zoom_level": 16,
+                "rag_analysis": "Enhanced analysis from RAG",
+                "message": "Thông tin chi tiết về KCN ABC"
+            }
+            
+            Hoặc khi có nhiều kết quả trùng tên:
+            {
+                "type": "kcn_detail_multiple_choice",
+                "options": [...],
+                "message": "Tìm thấy nhiều khu công nghiệp...",
+                "query_name": "..."
+            }
         """
         print(f"🔍 Processing KCN detail query: {question}")
         
@@ -1606,6 +1392,316 @@ if __name__ == "__main__":
         print("✅ KCN detail query processed successfully")
         return result
 
+    def _create_multiple_choice_response(self, df_result: pd.DataFrame, specific_name: str, query_type: Optional[str]) -> Dict:
+        """
+        Tạo response khi có nhiều KCN/CCN trùng tên để người dùng lựa chọn
+        
+        Args:
+            df_result: DataFrame chứa các kết quả tìm được
+            specific_name: Tên KCN/CCN người dùng tìm kiếm
+            query_type: Loại query (KCN/CCN)
+            
+        Returns:
+            {
+                "type": "kcn_detail_multiple_choice",
+                "options": [...],
+                "message": "...",
+                "query_name": "..."
+            }
+        """
+        cols = self.columns_map
+        options = []
+        
+        for idx, row in df_result.iterrows():
+            kcn_name = str(row.get(cols["name"], ""))
+            kcn_province = str(row.get(cols["province"], ""))
+            kcn_address = str(row.get(cols["address"], ""))
+            kcn_type = str(row.get(cols["type"], ""))
+            
+            # Tìm tọa độ cho từng option
+            coordinates = self._match_coordinates(kcn_name)
+            
+            option = {
+                "id": idx,  # ID để người dùng chọn
+                "name": kcn_name,
+                "province": kcn_province,
+                "address": kcn_address,
+                "type": kcn_type,
+                "coordinates": coordinates,
+                "display_text": f"{kcn_name} - {kcn_province}"
+            }
+            options.append(option)
+        
+        # Tạo message thông báo
+        if query_type == "KCN":
+            type_label = "khu công nghiệp"
+        elif query_type == "CCN":
+            type_label = "cụm công nghiệp"
+        else:
+            type_label = "khu/cụm công nghiệp"
+        
+        message = f"Tìm thấy {len(options)} {type_label} có tên tương tự '{specific_name}'. Vui lòng chọn một trong các tùy chọn sau:"
+        
+        return {
+            "type": "kcn_detail_multiple_choice",
+            "options": options,
+            "message": message,
+            "query_name": specific_name,
+            "total_options": len(options)
+        }
+
+    def process_kcn_choice_selection(self, choice_id: int, original_options: List[Dict]) -> Optional[Dict]:
+        """
+        Xử lý khi người dùng chọn một option từ danh sách multiple choice
+        
+        Args:
+            choice_id: ID của option được chọn
+            original_options: Danh sách options gốc
+            
+        Returns:
+            Response với thông tin chi tiết của KCN được chọn
+        """
+        try:
+            # Tìm option được chọn
+            selected_option = None
+            for option in original_options:
+                if option.get("id") == choice_id:
+                    selected_option = option
+                    break
+            
+            if not selected_option:
+                return {
+                    "type": "kcn_detail_not_found",
+                    "message": f"Không tìm thấy lựa chọn với ID {choice_id}. Vui lòng chọn lại.",
+                    "query_name": f"choice_{choice_id}"
+                }
+            
+            # Tạo kcn_info từ selected_option
+            kcn_info = {
+                "Tên": selected_option.get("name", ""),
+                "Địa chỉ": selected_option.get("address", ""),
+                "Tỉnh/Thành phố": selected_option.get("province", ""),
+                "Loại": selected_option.get("type", ""),
+                # Các thông tin khác sẽ cần query lại từ database nếu cần
+                "Tổng diện tích": "N/A",
+                "Giá thuê đất": "N/A", 
+                "Thời gian vận hành": "N/A",
+                "Ngành nghề": "N/A"
+            }
+            
+            # Lấy thông tin chi tiết từ database nếu có
+            if self.df is not None:
+                # Tìm row chính xác trong DataFrame
+                matching_rows = self.df[
+                    (self.df[self.columns_map["name"]].astype(str) == selected_option.get("name", "")) &
+                    (self.df[self.columns_map["province"]].astype(str) == selected_option.get("province", ""))
+                ]
+                
+                if not matching_rows.empty:
+                    row = matching_rows.iloc[0]
+                    kcn_info.update({
+                        "Tổng diện tích": str(row.get(self.columns_map["area"], "")),
+                        "Giá thuê đất": str(row.get(self.columns_map["rental_price"], "")),
+                        "Thời gian vận hành": str(row.get(self.columns_map["operation_time"], "")),
+                        "Ngành nghề": str(row.get(self.columns_map["industry"], ""))
+                    })
+            
+            coordinates = selected_option.get("coordinates")
+            
+            # Enhance với RAG nếu có
+            rag_analysis = self._enhance_with_rag(kcn_info, f"Thông tin chi tiết về {kcn_info['Tên']}")
+            
+            result = {
+                "type": "kcn_detail",
+                "kcn_info": kcn_info,
+                "coordinates": coordinates,
+                "zoom_level": 16,
+                "matched_name": kcn_info["Tên"],
+                "query_name": f"choice_{choice_id}",
+                "message": f"Thông tin chi tiết về {kcn_info['Tên']}"
+            }
+            
+            # Thêm RAG analysis nếu có
+            if rag_analysis:
+                result["rag_analysis"] = rag_analysis
+                result["has_rag"] = True
+            else:
+                result["has_rag"] = False
+            
+            return result
+            
+        except Exception as e:
+            print(f"❌ Error processing choice selection: {e}")
+            return {
+                "type": "kcn_detail_not_found",
+                "message": f"Có lỗi xảy ra khi xử lý lựa chọn. Vui lòng thử lại.",
+                "query_name": f"choice_error_{choice_id}"
+            }
+
+    def _create_multiple_choice_response(self, df_result: pd.DataFrame, specific_name: str, query_type: Optional[str]) -> Dict:
+        """
+        Tạo response khi có nhiều KCN/CCN trùng tên để người dùng lựa chọn
+        
+        Args:
+            df_result: DataFrame chứa các kết quả tìm được
+            specific_name: Tên KCN/CCN người dùng tìm kiếm
+            query_type: Loại query (KCN/CCN)
+            
+        Returns:
+            {
+                "type": "kcn_detail_multiple_choice",
+                "options": [...],
+                "message": "...",
+                "query_name": "..."
+            }
+        """
+        cols = self.columns_map
+        options = []
+        
+        for idx, row in df_result.iterrows():
+            kcn_name = str(row.get(cols["name"], ""))
+            kcn_province = str(row.get(cols["province"], ""))
+            kcn_address = str(row.get(cols["address"], ""))
+            kcn_type = str(row.get(cols["type"], ""))
+            
+            # Tìm tọa độ cho từng option
+            coordinates = self._match_coordinates(kcn_name)
+            
+            option = {
+                "id": idx,  # ID để người dùng chọn
+                "name": kcn_name,
+                "province": kcn_province,
+                "address": kcn_address,
+                "type": kcn_type,
+                "coordinates": coordinates,
+                "display_text": f"{kcn_name} - {kcn_province}"
+            }
+            options.append(option)
+        
+        # Tạo message thông báo
+        if query_type == "KCN":
+            type_label = "khu công nghiệp"
+        elif query_type == "CCN":
+            type_label = "cụm công nghiệp"
+        else:
+            type_label = "khu/cụm công nghiệp"
+        
+        message = f"Tìm thấy {len(options)} {type_label} có tên tương tự '{specific_name}'. Vui lòng chọn một trong các tùy chọn sau:"
+        
+        return {
+            "type": "kcn_detail_multiple_choice",
+            "options": options,
+            "message": message,
+            "query_name": specific_name,
+            "total_options": len(options)
+        }
+
+    def process_kcn_choice_selection(self, choice_id: int, original_options: List[Dict]) -> Optional[Dict]:
+        """
+        Xử lý khi người dùng chọn một option từ danh sách multiple choice
+        
+        Args:
+            choice_id: ID của option được chọn
+            original_options: Danh sách options gốc
+            
+        Returns:
+            Response với thông tin chi tiết của KCN được chọn
+        """
+        try:
+            # Tìm option được chọn
+            selected_option = None
+            for option in original_options:
+                if option.get("id") == choice_id:
+                    selected_option = option
+                    break
+            
+            if not selected_option:
+                return {
+                    "type": "kcn_detail_not_found",
+                    "message": f"Không tìm thấy lựa chọn với ID {choice_id}. Vui lòng chọn lại.",
+                    "query_name": f"choice_{choice_id}"
+                }
+            
+            # Tạo kcn_info từ selected_option
+            kcn_info = {
+                "Tên": selected_option.get("name", ""),
+                "Địa chỉ": selected_option.get("address", ""),
+                "Tỉnh/Thành phố": selected_option.get("province", ""),
+                "Loại": selected_option.get("type", ""),
+                # Các thông tin khác sẽ cần query lại từ database nếu cần
+                "Tổng diện tích": "N/A",
+                "Giá thuê đất": "N/A", 
+                "Thời gian vận hành": "N/A",
+                "Ngành nghề": "N/A"
+            }
+            
+            # Lấy thông tin chi tiết từ database nếu có
+            if self.df is not None:
+                # Tìm row chính xác trong DataFrame
+                matching_rows = self.df[
+                    (self.df[self.columns_map["name"]].astype(str) == selected_option.get("name", "")) &
+                    (self.df[self.columns_map["province"]].astype(str) == selected_option.get("province", ""))
+                ]
+                
+                if not matching_rows.empty:
+                    row = matching_rows.iloc[0]
+                    kcn_info.update({
+                        "Tổng diện tích": str(row.get(self.columns_map["area"], "")),
+                        "Giá thuê đất": str(row.get(self.columns_map["rental_price"], "")),
+                        "Thời gian vận hành": str(row.get(self.columns_map["operation_time"], "")),
+                        "Ngành nghề": str(row.get(self.columns_map["industry"], ""))
+                    })
+            
+            coordinates = selected_option.get("coordinates")
+            
+            # Enhance với RAG nếu có
+            rag_analysis = self._enhance_with_rag(kcn_info, f"Thông tin chi tiết về {kcn_info['Tên']}")
+            
+            result = {
+                "type": "kcn_detail",
+                "kcn_info": kcn_info,
+                "coordinates": coordinates,
+                "zoom_level": 16,
+                "matched_name": kcn_info["Tên"],
+                "query_name": f"choice_{choice_id}",
+                "message": f"Thông tin chi tiết về {kcn_info['Tên']}"
+            }
+            
+            # Thêm RAG analysis nếu có
+            if rag_analysis:
+                result["rag_analysis"] = rag_analysis
+                result["has_rag"] = True
+            else:
+                result["has_rag"] = False
+            
+            return result
+            
+        except Exception as e:
+            print(f"❌ Error processing choice selection: {e}")
+            return {
+                "type": "kcn_detail_not_found",
+                "message": f"Có lỗi xảy ra khi xử lý lựa chọn. Vui lòng thử lại.",
+                "query_name": f"choice_error_{choice_id}"
+            }
+
+    def handle_kcn_detail_query_with_choice_support(self, question: str) -> Optional[Dict]:
+        """
+        Wrapper function để xử lý KCN detail query với hỗ trợ multiple choice
+        Trả về format tương thích với main.py hiện tại
+        
+        Returns:
+            - Nếu có 1 kết quả: trả về như cũ với type "kcn_detail"
+            - Nếu có nhiều kết quả: trả về type "kcn_detail_multiple_choice" với danh sách lựa chọn
+            - Nếu không tìm thấy: trả về type "kcn_detail_not_found"
+        """
+        result = self.process_kcn_detail_query(question)
+        
+        if not result:
+            return None
+            
+        # Trả về kết quả như cũ, main.py sẽ xử lý dựa trên type
+        return result
+
     def _extract_kcn_name_fallback(self, question: str) -> Optional[str]:
         """
         Fallback method để trích xuất tên KCN/CCN khi không có LLM
@@ -1656,13 +1752,141 @@ if __name__ == "__main__":
                 return match.group(1).strip()
         
         return None
-    # ==========================================================
-    # 🆕 IMPROVED KCN DETAIL QUERY WITH MULTIPLE CHOICE SUPPORT
-    # ==========================================================
-    
-    def is_kcn_detail_query(self, question: str) -> bool:
+        """
+        Fallback method để trích xuất tên KCN/CCN khi không có LLM
+        """
+        import re
+        
+        question_clean = question.strip()
+        
+        # Pattern đặc biệt cho "Detail KCN/CCN [tên]"
+        detail_match = re.search(r'detail\s+(kcn|ccn|khu công nghiệp|cụm công nghiệp)\s+(.+?)(?:\s*$|\s*\?)', question_clean, re.IGNORECASE)
+        if detail_match:
+            kcn_type = detail_match.group(1).lower()
+            kcn_name = detail_match.group(2).strip()
+            if kcn_type in ['kcn', 'khu công nghiệp']:
+                return f"khu công nghiệp {kcn_name}"
+            else:
+                return f"cụm công nghiệp {kcn_name}"
+        
+        # Pattern 1: "về [tên KCN]"
+        match = re.search(r'về\s+(.+?)(?:\s*$|\s*\?)', question_clean, re.IGNORECASE)
+        if match:
+            return match.group(1).strip()
+        
+        # Pattern 2: Chỉ có "KCN/CCN + tên" (pattern đơn giản)
+        simple_patterns = [
+            r'^(khu công nghiệp|kcn)\s+(.+?)(?:\s*$|\s*\?)',
+            r'^(cụm công nghiệp|ccn)\s+(.+?)(?:\s*$|\s*\?)'
+        ]
+        
+        for pattern in simple_patterns:
+            match = re.search(pattern, question_clean, re.IGNORECASE)
+            if match:
+                kcn_type = match.group(1).lower()
+                kcn_name = match.group(2).strip()
+                return f"{kcn_type} {kcn_name}"
+        
+        # Pattern 3: Tìm tên có chứa KCN/CCN keywords trong câu
+        kcn_patterns = [
+            r'(khu công nghiệp[\w\s\-]+?)(?:\s*$|\s*\?|ở|tại)',
+            r'(kcn[\w\s\-]+?)(?:\s*$|\s*\?|ở|tại)',
+            r'(cụm công nghiệp[\w\s\-]+?)(?:\s*$|\s*\?|ở|tại)',
+            r'(ccn[\w\s\-]+?)(?:\s*$|\s*\?|ở|tại)'
+        ]
+        
+        for pattern in kcn_patterns:
+            match = re.search(pattern, question_clean, re.IGNORECASE)
+            if match:
+                return match.group(1).strip()
+        
+        return None
+
+
+# ==========================================================
+# 🔌 TÍCH HỢP VÀO CHATBOT
+# ==========================================================
+
+
+# ==========================================================
+# 🔌 TÍCH HỢP VÀO CHATBOT
+# ==========================================================
+def integrate_excel_to_chatbot(excel_path: str, geojson_path: Optional[str] = None, llm=None, embedding=None):
+    """Tích hợp module Excel vào chatbot với RAG support"""
+    if not Path(excel_path).exists():
+        print(f"❌ Không tìm thấy file Excel: {excel_path}")
+        return None
+    handler = ExcelQueryHandler(excel_path, geojson_path=geojson_path, llm=llm, embedding=embedding)
+    print("✅ Đã tích hợp module truy vấn Excel với LLM + RAG support.")
+    return handler
+
+
+# ==========================================================
+# 🧪 TEST MODULE
+# ==========================================================
+if __name__ == "__main__":
+    EXCEL_FILE = r"./data/IIPMap_FULL_63_COMPLETE.xlsx"
+    GEOJSON_FILE = r"./map_ui/industrial_zones.geojson"  
+
+    # Khởi tạo LLM cho test
+    try:
+        from langchain_openai import ChatOpenAI
+        test_llm = ChatOpenAI(
+            model_name="gpt-4o-mini",
+            temperature=0
+        )
+        print("✅ LLM initialized for testing")
+    except:
+        test_llm = None
+        print("⚠️ LLM not available for testing")
+
+    handler = ExcelQueryHandler(EXCEL_FILE, geojson_path=GEOJSON_FILE, llm=test_llm)
+
+    test_queries = [
+        "Danh sách cụm công nghiệp ở Bắc Ninh",
+        "Danh sách khu công nghiệp ở Bắc Ninh",
+        "Danh sách khu và cụm công nghiệp ở Bắc Ninh",
+        "Danh sách tất cả khu công nghiệp và cụm công nghiệp ở Hà Nội",
+        "Vẽ biểu đồ cột về diện tích của khu công nghiệp ở Hồ Chí Minh",
+        "Vẽ biểu đồ cột về diện tích của cụm công nghiệp ở Đà Nẵng",
+        "Vẽ biểu đồ cột về diện tích của cả khu và cụm công nghiệp ở Bình Dương",
+        "Khu và cụm công nghiệp tỉnh Lai Châu",  # Test tỉnh không có dữ liệu
+        "Danh sách khu công nghiệp ở Điện Biên",  # Test tỉnh không có dữ liệu
+        # Test specific name searches
+        "cho tôi thông tin về KHU CÔNG NGHIỆP NGŨ LẠC - VĨNH LONG",
+        "thông tin về khu công nghiệp Sóng Thần",
+        "tìm cụm công nghiệp Tân Bình",
+        "KHU CÔNG NGHIỆP VSIP BẮC NINH",
+        "cụm công nghiệp Phú Mỹ"
+    ]
+
+    print("\n" + "=" * 80)
+    print("TEST MODULE TRẢ KẾT QUẢ DẠNG JSON (CÓ TỌA ĐỘ + LLM SMART CHECK)")
+    print("=" * 80)
+
+    for query in test_queries:
+        print(f"\n❓ {query}")
+        handled, response = handler.process_query(query, return_json=True)
+        if handled:
+            print(response)
+        else:
+            print("⏭️ Bỏ qua - Không phải câu hỏi liệt kê KCN/CCN hoặc thiếu thông tin")
+        print("-" * 80)
         """
         Kiểm tra xem câu hỏi có phải là tra cứu chi tiết KCN/CCN không
+        
+        Patterns nhận diện:
+        - "Khu công nghiệp VSIP" (tên KCN cụ thể)
+        - "Khu công nghiệp Bắc Hải" (tên KCN cụ thể)
+        - "CCN Tân Bình" (tên CCN cụ thể)
+        - "thông tin về KHU CÔNG NGHIỆP ABC" (có tên cụ thể)
+        - "cho tôi biết về CCN XYZ" (có tên cụ thể)
+        - "KCN ABC ở đâu" (có tên cụ thể)
+        - "Detail KCN ABC" (có từ Detail)
+        
+        KHÔNG PHẢI:
+        - "cho tôi các khu công nghiệp ở Thanh Hóa" (query tổng quát theo tỉnh)
+        - "danh sách KCN ở Bắc Ninh" (query danh sách)
         """
         question_lower = question.lower().strip()
         
@@ -1748,117 +1972,4 @@ if __name__ == "__main__":
         if result:
             print(f"🎯 Detected KCN detail query: {question}")
         
-        return result
-
-    def process_kcn_detail_query_with_multiple_choice(self, question: str) -> Optional[Dict]:
-        """
-        Xử lý câu hỏi tra cứu chi tiết KCN/CCN với hỗ trợ multiple choice
-        
-        Returns:
-            - Nếu có 1 kết quả: {"type": "kcn_detail", "kcn_info": {...}, ...}
-            - Nếu có nhiều kết quả: {"type": "kcn_multiple_choice", "options": [...], ...}
-            - Nếu không tìm thấy: {"type": "kcn_detail_not_found", "message": "..."}
-        """
-        print(f"🔍 Processing KCN detail query: {question}")
-        
-        if not self.is_kcn_detail_query(question):
-            print("❌ Not a KCN detail query")
-            return None
-        
-        # Sử dụng LLM để phân tích và trích xuất tên KCN
-        specific_name = None
-        query_type = None
-        
-        if self.llm:
-            print("🤖 Using LLM for analysis")
-            analysis = self._analyze_query_with_llm(question)
-            
-            if not analysis.get("is_industrial_query", False):
-                print("❌ LLM says not industrial query")
-                return None
-            
-            if analysis.get("search_type") == "specific_name":
-                specific_name = analysis.get("specific_name")
-                query_type = analysis.get("query_type")
-                print(f"🎯 LLM extracted: {specific_name}, type: {query_type}")
-        
-        # Fallback: extract name manually when no LLM or LLM failed
-        if not specific_name:
-            print("🔧 Using fallback extraction")
-            specific_name = self._extract_kcn_name_fallback(question)
-            query_type = None  # Let query_by_specific_name handle this
-            print(f"🎯 Fallback extracted: {specific_name}")
-        
-        if not specific_name:
-            print("❌ Could not extract KCN name")
-            return None
-        
-        # Tìm thông tin KCN từ structured data
-        print(f"🔍 Searching for: {specific_name}")
-        df_result = self.query_by_specific_name(specific_name, query_type)
-        
-        if df_result is None or df_result.empty:
-            print(f"❌ No results found for: {specific_name}")
-            return {
-                "type": "kcn_detail_not_found",
-                "message": f"Không tìm thấy thông tin về '{specific_name}'. Vui lòng kiểm tra lại tên hoặc thử tìm kiếm với từ khóa khác.",
-                "query_name": specific_name
-            }
-        
-        print(f"✅ Found {len(df_result)} results")
-        
-        # 🆕 KIỂM TRA NHIỀU KẾT QUẢ TRÙNG TÊN
-        if len(df_result) > 1:
-            print(f"🔀 Multiple results found, creating choice list")
-            return self._create_multiple_choice_response(df_result, specific_name, query_type)
-        
-        # Chỉ có 1 kết quả - trả về chi tiết như cũ
-        return self._create_single_kcn_detail_response(df_result.iloc[0], specific_name, question)
-
-    def _create_single_kcn_detail_response(self, row, specific_name: str, question: str) -> Dict:
-        """
-        Tạo response cho 1 KCN duy nhất
-        """
-        cols = self.columns_map
-        
-        kcn_info = {
-            "Tên": str(row.get(cols["name"], "")),
-            "Địa chỉ": str(row.get(cols["address"], "")),
-            "Tỉnh/Thành phố": str(row.get(cols["province"], "")),
-            "Loại": str(row.get(cols["type"], "")),
-            "Tổng diện tích": str(row.get(cols["area"], "")),
-            "Giá thuê đất": str(row.get(cols["rental_price"], "")),
-            "Thời gian vận hành": str(row.get(cols["operation_time"], "")),
-            "Ngành nghề": str(row.get(cols["industry"], "")),
-        }
-        
-        print(f"📋 KCN Info: {kcn_info['Tên']}")
-        
-        # Tìm tọa độ
-        coordinates = self._match_coordinates(kcn_info["Tên"])
-        print(f"📍 Coordinates: {coordinates}")
-        
-        # Enhance với RAG
-        rag_analysis = self._enhance_with_rag(kcn_info, question)
-        
-        result = {
-            "type": "kcn_detail",
-            "kcn_info": kcn_info,
-            "coordinates": coordinates,
-            "zoom_level": 16,  # Zoom rất gần để thấy chi tiết vị trí
-            "matched_name": kcn_info["Tên"],
-            "query_name": specific_name,
-            "message": f"Thông tin chi tiết về {kcn_info['Tên']}"
-        }
-        
-        # Thêm RAG analysis nếu có
-        if rag_analysis:
-            result["rag_analysis"] = rag_analysis
-            result["has_rag"] = True
-            print("✅ Added RAG analysis")
-        else:
-            result["has_rag"] = False
-            print("⚠️ No RAG analysis")
-        
-        print("✅ KCN detail query processed successfully")
         return result
