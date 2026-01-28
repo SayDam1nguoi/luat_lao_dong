@@ -29,7 +29,8 @@ class ExcelQueryHandler:
         self,
         excel_path: str,
         geojson_path: Optional[str] = None,
-        match_threshold: int = 82
+        match_threshold: int = 82,
+        llm=None
     ):
         """
         Khởi tạo handler với đường dẫn file Excel
@@ -38,9 +39,14 @@ class ExcelQueryHandler:
             excel_path: Đường dẫn đến file Excel chứa thông tin KCN/CCN
             geojson_path: (tuỳ chọn) Đường dẫn industrial_zones.geojson để gắn tọa độ
             match_threshold: ngưỡng match tên (RapidFuzz) để chấp nhận tọa độ
+            llm: Language model để xử lý prompt-based (BẮT BUỘC)
         """
         self.excel_path = excel_path
         self.df: Optional[pd.DataFrame] = None
+        self.llm = llm
+
+        if not self.llm:
+            print("⚠️ WARNING: Hệ thống prompt-based cần LLM. Sẽ fallback về keyword nếu cần.")
 
         self.match_threshold = match_threshold
         self.geojson_path = geojson_path
@@ -154,6 +160,292 @@ class ExcelQueryHandler:
             print(f"⚠️ Lỗi load GeoJSON: {e}. (bỏ qua gắn tọa độ)")
 
     # ==========================================================
+    # 🤖 PROMPT-BASED QUERY ANALYSIS
+    # ==========================================================
+    def _analyze_query_with_llm(self, question: str) -> Dict[str, Any]:
+        """
+        Sử dụng LLM để phân tích toàn bộ câu hỏi và trả về thông tin cần thiết
+        
+        Returns:
+            {
+                "is_industrial_query": bool,
+                "province": str or None,
+                "query_type": "KCN" | "CCN" | None (None = tất cả),
+                "search_type": "province" | "specific_name",
+                "specific_name": str or None,
+                "confidence": float,
+                "reasoning": str
+            }
+        """
+        if not self.llm or self.df is None:
+            # Fallback về keyword nếu không có LLM
+            return self._fallback_keyword_analysis(question)
+        
+        # Lấy danh sách tỉnh có trong dữ liệu
+        available_provinces = self.df[self.columns_map["province"]].dropna().unique().tolist()
+        available_provinces_str = ", ".join(available_provinces)
+        
+        # Lấy một số tên KCN/CCN mẫu để LLM hiểu format
+        sample_names = []
+        if self.columns_map["name"] is not None:
+            sample_names = self.df[self.columns_map["name"]].dropna().head(10).tolist()
+        sample_names_str = ", ".join(sample_names[:5]) if sample_names else "Không có dữ liệu mẫu"
+        
+        prompt = f"""
+Bạn là chuyên gia phân tích câu hỏi về khu công nghiệp và cụm công nghiệp Việt Nam.
+
+DANH SÁCH TỈNH/THÀNH PHỐ CÓ DỮ LIỆU:
+{available_provinces_str}
+
+MỘT SỐ TÊN KCN/CCN MẪU:
+{sample_names_str}
+
+CÂU HỎI NGƯỜI DÙNG: "{question}"
+
+NHIỆM VỤ: Phân tích câu hỏi và trả về JSON với các thông tin sau:
+
+1. "is_industrial_query": true/false
+   - true nếu câu hỏi về khu công nghiệp (KCN) hoặc cụm công nghiệp (CCN)
+   - false nếu không liên quan
+
+2. "search_type": "province" hoặc "specific_name"
+   - "province" nếu người dùng hỏi về KCN/CCN trong một tỉnh/thành phố
+   - "specific_name" nếu người dùng hỏi về một KCN/CCN cụ thể theo tên
+
+3. "province": tên tỉnh/thành phố (chỉ khi search_type = "province")
+   - Trích xuất tên tỉnh từ câu hỏi
+   - Phải khớp CHÍNH XÁC với một trong các tỉnh trong danh sách
+   - Trả về null nếu không tìm thấy hoặc không khớp
+
+4. "specific_name": tên KCN/CCN cụ thể (chỉ khi search_type = "specific_name")
+   - Trích xuất tên KCN/CCN từ câu hỏi
+   - Bao gồm cả từ khóa "KHU CÔNG NGHIỆP" hoặc "CỤM CÔNG NGHIỆP" nếu có
+
+5. "query_type": loại truy vấn - QUAN TRỌNG: PHÂN BIỆT RÕ RÀNG
+   - "KCN" nếu câu hỏi CHỈ NHẮC ĐẾN "khu công nghiệp", "kcn", "khu cn", "khu" (và KHÔNG có "cụm")
+   - "CCN" nếu câu hỏi CHỈ NHẮC ĐẾN "cụm công nghiệp", "ccn", "cụm cn", "cụm" (và KHÔNG có "khu")
+   - null chỉ khi câu hỏi NHẮC ĐẾN CẢ HAI: "khu và cụm", "kcn và ccn", "khu công nghiệp và cụm công nghiệp"
+
+6. "confidence": độ tin cậy (0.0-1.0)
+   - Mức độ chắc chắn về phân tích
+
+7. "reasoning": lý do phân tích
+   - Giải thích ngắn gọn tại sao phân tích như vậy
+
+QUAN TRỌNG - PHÂN BIỆT QUERY_TYPE:
+- Nếu câu hỏi chỉ có "khu" hoặc "kcn" (và KHÔNG có "cụm") → query_type = "KCN"
+- Nếu câu hỏi chỉ có "cụm" hoặc "ccn" (và KHÔNG có "khu") → query_type = "CCN"  
+- Nếu câu hỏi có cả "khu" và "cụm" → query_type = null
+- "công nghiệp" không quyết định loại, chỉ có "khu" vs "cụm" mới quyết định
+- LUÔN LUÔN kiểm tra xem câu hỏi có cả "khu" và "cụm" không trước khi quyết định
+- Ví dụ: "cụm công nghiệp ở Vĩnh Long" → chỉ có "cụm", không có "khu" → query_type = "CCN"
+- Ví dụ: "khu công nghiệp ở Hà Nội" → chỉ có "khu", không có "cụm" → query_type = "KCN"
+
+BƯỚC PHÂN TÍCH QUERY_TYPE:
+1. Tìm từ "khu" hoặc "kcn" trong câu hỏi → has_khu = true/false
+2. Tìm từ "cụm" hoặc "ccn" trong câu hỏi → has_cum = true/false  
+3. Nếu has_khu = true và has_cum = true → query_type = null
+4. Nếu has_khu = true và has_cum = false → query_type = "KCN"
+5. Nếu has_khu = false và has_cum = true → query_type = "CCN"
+6. Nếu has_khu = false và has_cum = false → query_type = null
+
+VÍ DỤ SEARCH_TYPE = "province":
+- "khu công nghiệp ở Hà Nội" → {{"query_type": "KCN", "reasoning": "Chỉ hỏi về KHU công nghiệp, không nhắc đến cụm"}}
+- "cụm công nghiệp ở Bình Dương" → {{"query_type": "CCN", "reasoning": "Chỉ hỏi về CỤM công nghiệp, không nhắc đến khu"}}
+- "khu và cụm công nghiệp ở Đà Nẵng" → {{"query_type": null, "reasoning": "Hỏi về CẢ HAI khu và cụm"}}
+- "danh sách cụm công nghiệp ở Bình Dương" → {{"query_type": "CCN", "reasoning": "Chỉ hỏi về CỤM công nghiệp, không nhắc đến khu"}}
+- "vẽ biểu đồ cụm công nghiệp ở Hải Phòng" → {{"query_type": "CCN", "reasoning": "Chỉ hỏi về CỤM công nghiệp, không nhắc đến khu"}}
+
+VÍ DỤ SEARCH_TYPE = "specific_name":
+- "cho tôi thông tin về KHU CÔNG NGHIỆP NGŨ LẠC - VĨNH LONG" → {{"query_type": "KCN", "reasoning": "Tìm KCN cụ thể"}}
+- "thông tin về cụm công nghiệp ABC" → {{"query_type": "CCN", "reasoning": "Tìm CCN cụ thể"}}
+
+CHỈ TRẢ VỀ JSON:
+"""
+
+        try:
+            from langchain_core.messages import HumanMessage
+            response = self.llm.invoke([HumanMessage(content=prompt)]).content.strip()
+            
+            # Debug: In ra response để kiểm tra
+            print(f"🔍 LLM raw response: '{response}'")
+            
+            # Kiểm tra response có rỗng không
+            if not response:
+                print("⚠️ LLM returned empty response")
+                return self._fallback_keyword_analysis(question)
+            
+            # Thử parse JSON
+            import json
+            try:
+                result = json.loads(response)
+            except json.JSONDecodeError as json_error:
+                print(f"⚠️ JSON parse error: {json_error}")
+                print(f"⚠️ Raw response was: '{response}'")
+                
+                # Thử extract JSON từ response nếu có markdown format
+                import re
+                
+                # Loại bỏ markdown code blocks
+                cleaned_response = response.strip()
+                if cleaned_response.startswith('```json'):
+                    cleaned_response = cleaned_response[7:]  # Bỏ ```json
+                if cleaned_response.startswith('```'):
+                    cleaned_response = cleaned_response[3:]   # Bỏ ```
+                if cleaned_response.endswith('```'):
+                    cleaned_response = cleaned_response[:-3]  # Bỏ ```
+                
+                cleaned_response = cleaned_response.strip()
+                print(f"🧹 Cleaned response: '{cleaned_response}'")
+                
+                # Thử parse lại
+                try:
+                    result = json.loads(cleaned_response)
+                    print("✅ Successfully parsed cleaned JSON")
+                except json.JSONDecodeError:
+                    # Thử tìm JSON object trong text
+                    json_match = re.search(r'\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}', cleaned_response, re.DOTALL)
+                    if json_match:
+                        try:
+                            result = json.loads(json_match.group())
+                            print("✅ Successfully extracted JSON from response")
+                        except:
+                            print("❌ Failed to extract JSON from response")
+                            return self._fallback_keyword_analysis(question)
+                    else:
+                        print("❌ No JSON found in response")
+                        return self._fallback_keyword_analysis(question)
+            
+            # Validate result
+            required_keys = ["is_industrial_query", "search_type", "province", "specific_name", "query_type", "confidence", "reasoning"]
+            if all(key in result for key in required_keys):
+                return result
+            else:
+                print(f"⚠️ LLM response missing keys: {list(result.keys())}")
+                return self._fallback_keyword_analysis(question)
+                
+        except Exception as e:
+            print(f"⚠️ LLM analysis failed: {e}")
+            return self._fallback_keyword_analysis(question)
+
+    def _fallback_keyword_analysis(self, question: str) -> Dict[str, Any]:
+        """Fallback keyword-based analysis khi LLM không khả dụng"""
+        question_norm = self._normalize_text(question.lower())
+        
+        # Check if industrial query
+        industrial_keywords = [
+            "kcn", "ccn", "khu cong nghiep", "cum cong nghiep",
+            "khu cn", "cum cn", "khu nghiep", "cum nghiep"
+        ]
+        is_industrial = any(k in question_norm for k in industrial_keywords)
+        
+        if not is_industrial:
+            return {
+                "is_industrial_query": False,
+                "search_type": "province",
+                "province": None,
+                "specific_name": None,
+                "query_type": None,
+                "confidence": 0.9,
+                "reasoning": "Không phải câu hỏi về khu/cụm công nghiệp"
+            }
+        
+        # Determine search type - simple heuristic
+        # If contains specific industrial zone keywords, likely specific name search
+        specific_indicators = ["khu cong nghiep", "cum cong nghiep", "thong tin ve", "cho toi thong tin"]
+        is_specific_search = any(indicator in question_norm for indicator in specific_indicators)
+        
+        # Extract province (simplified)
+        province = None
+        specific_name = None
+        search_type = "province"
+        
+        if self.df is not None and self.columns_map["province"] is not None:
+            unique_provinces = self.df[self.columns_map["province"]].dropna().unique()
+            for prov in unique_provinces:
+                prov_norm = self._normalize_text(str(prov).lower())
+                if prov_norm in question_norm:
+                    province = str(prov)
+                    break
+        
+        # If no province found but has specific indicators, treat as specific name search
+        if province is None and is_specific_search:
+            search_type = "specific_name"
+            # Try to extract the specific name (simplified)
+            if "khu cong nghiep" in question_norm:
+                # Find text after "khu cong nghiep"
+                parts = question_norm.split("khu cong nghiep")
+                if len(parts) > 1:
+                    specific_name = f"khu cong nghiep{parts[1]}".strip()
+            elif "cum cong nghiep" in question_norm:
+                # Find text after "cum cong nghiep"
+                parts = question_norm.split("cum cong nghiep")
+                if len(parts) > 1:
+                    specific_name = f"cum cong nghiep{parts[1]}".strip()
+        
+        # Detect type (simplified) - CẢI THIỆN LOGIC
+        has_cum = any(k in question_norm for k in ["cum", "ccn"])
+        has_khu = any(k in question_norm for k in ["khu", "kcn"])
+        
+        # QUAN TRỌNG: Chỉ trả về loại cụ thể khi chỉ có 1 loại
+        if has_cum and has_khu:
+            query_type = None  # Có cả hai
+        elif has_cum and not has_khu:
+            query_type = "CCN"  # Chỉ có cụm
+        elif has_khu and not has_cum:
+            query_type = "KCN"  # Chỉ có khu
+        else:
+            query_type = None  # Không rõ ràng
+        
+        return {
+            "is_industrial_query": True,
+            "search_type": search_type,
+            "province": province,
+            "specific_name": specific_name,
+            "query_type": query_type,
+            "confidence": 0.7,
+            "reasoning": "Fallback keyword analysis"
+        }
+
+    def _generate_smart_error_message(self, question: str, extracted_province: Optional[str]) -> str:
+        """Tạo thông báo lỗi thông minh khi không tìm thấy tỉnh"""
+        if not self.llm or self.df is None:
+            return "❓ Bạn vui lòng nêu rõ tỉnh/thành phố cần tra cứu."
+        
+        available_provinces = self.df[self.columns_map["province"]].dropna().unique().tolist()
+        available_provinces_str = ", ".join(available_provinces)
+        
+        prompt = f"""
+Bạn là trợ lý thông minh về dữ liệu khu công nghiệp Việt Nam.
+
+DANH SÁCH TỈNH/THÀNH PHỐ CÓ DỮ LIỆU:
+{available_provinces_str}
+
+CÂU HỎI NGƯỜI DÙNG: "{question}"
+TỈNH ĐƯỢC TRÍCH XUẤT: "{extracted_province}"
+
+NHIỆM VỤ: Tạo thông báo lỗi thông minh và hữu ích:
+1. Thông báo tỉnh không có dữ liệu (nếu có tỉnh được trích xuất)
+2. Gợi ý 2-3 tỉnh gần nhất hoặc tương tự có dữ liệu
+3. Giải thích ngắn gọn bằng tiếng Việt
+
+Nếu không trích xuất được tỉnh nào, chỉ cần nói "❓ Bạn vui lòng nêu rõ tỉnh/thành phố cần tra cứu."
+
+CHỈ TRẢ VỀ THÔNG BÁO BẰNG TIẾNG VIỆT:
+"""
+
+        try:
+            from langchain_core.messages import HumanMessage
+            response = self.llm.invoke([HumanMessage(content=prompt)]).content.strip()
+            return response
+        except Exception as e:
+            print(f"⚠️ Error message generation failed: {e}")
+            if extracted_province:
+                return f"❌ Không tìm thấy dữ liệu cho '{extracted_province}'. Vui lòng kiểm tra lại tên tỉnh."
+            else:
+                return "❓ Bạn vui lòng nêu rõ tỉnh/thành phố cần tra cứu."
+
+    # ==========================================================
     # 🧠 NHẬN DIỆN CÂU HỎI NGƯỜI DÙNG
     # ==========================================================
     def is_count_query(self, question: str) -> bool:
@@ -163,61 +455,143 @@ class ExcelQueryHandler:
         NOTE: bản cũ kiểm tra count_keywords nhưng cuối cùng vẫn return has_industrial.
         Ở đây giữ “thoáng” nhưng hợp lý hơn: cần có industrial keyword.
         """
-        question_norm = self._normalize_text(question.lower())
-
-        industrial_keywords = [
-            "kcn", "ccn", "khu cong nghiep", "cum cong nghiep",
-            "khu cn", "cum cn", "khu nghiep", "cum nghiep"
-        ]
-
-        has_industrial = any(k in question_norm for k in industrial_keywords)
-        return has_industrial
+        analysis = self._analyze_query_with_llm(question)
+        return analysis.get("is_industrial_query", False)
 
     # ==========================================================
-    # 🧭 XÁC ĐỊNH LOẠI TRUY VẤN (KHU / CỤM)
+    # 🧭 XÁC ĐỊNH LOẠI TRUY VẤN (KHU / CỤM / CẢ HAI)
     # ==========================================================
     def detect_type(self, question: str) -> Optional[str]:
         """
-        Xác định người dùng hỏi khu hay cụm công nghiệp.
-        Ưu tiên từ khóa cụm trước.
+        Xác định người dùng hỏi khu hay cụm công nghiệp hoặc cả hai sử dụng LLM analysis.
         """
-        q = self._normalize_text(question)
-
-        if any(k in q for k in ["cum cong nghiep", "ccn", "cum cn", "cum nghiep"]):
-            return "CCN"
-
-        if any(k in q for k in ["khu cong nghiep", "kcn", "khu cn", "khu nghiep"]):
-            return "KCN"
-
-        if "cong nghiep" in q:
-            return None
-
-        return None
+        analysis = self._analyze_query_with_llm(question)
+        return analysis.get("query_type")
 
     # ==========================================================
-    # 🧩 TRÍCH XUẤT TỈNH/THÀNH PHỐ
+    # 🤖 KIỂM TRA TỈNH THÔNG MINH VỚI LLM
+    # ==========================================================
+    def _smart_province_check(self, question: str, extracted_province: Optional[str]) -> Tuple[bool, str]:
+        """
+        Sử dụng LLM để kiểm tra tỉnh có tồn tại trong dữ liệu hay không
+        và đưa ra phản hồi thông minh
+        
+        Returns:
+            (is_valid: bool, message: str)
+        """
+        if extracted_province is None:
+            return False, "❓ Bạn vui lòng nêu rõ tỉnh/thành phố cần tra cứu."
+            
+        if self.df is None:
+            return False, "❌ Không có dữ liệu để tra cứu."
+        
+        # Lấy danh sách tỉnh có trong dữ liệu
+        available_provinces = self.df[self.columns_map["province"]].dropna().unique().tolist()
+        
+        # Kiểm tra exact match trước
+        province_normalized = self._normalize_text(extracted_province.lower())
+        for available_province in available_provinces:
+            if self._normalize_text(available_province.lower()) == province_normalized:
+                return True, ""
+        
+        # Kiểm tra partial match
+        for available_province in available_provinces:
+            available_normalized = self._normalize_text(available_province.lower())
+            if province_normalized in available_normalized or available_normalized in province_normalized:
+                return True, ""
+        
+        # Nếu không có LLM, sử dụng logic fallback đơn giản
+        if not self.llm:
+            # Tìm tỉnh gần nhất
+            similar_provinces = []
+            for available_province in available_provinces:
+                available_normalized = self._normalize_text(available_province.lower())
+                # Kiểm tra có từ chung không
+                province_words = set(province_normalized.split())
+                available_words = set(available_normalized.split())
+                if province_words.intersection(available_words):
+                    similar_provinces.append(available_province)
+            
+            if similar_provinces:
+                suggestion = f"Có thể bạn muốn tìm: {', '.join(similar_provinces[:3])}"
+            else:
+                # Gợi ý một số tỉnh phổ biến
+                popular_provinces = [p for p in available_provinces if any(keyword in self._normalize_text(p.lower()) 
+                                   for keyword in ['ha noi', 'ho chi minh', 'da nang', 'binh duong', 'dong nai'])][:3]
+                if popular_provinces:
+                    suggestion = f"Một số tỉnh có dữ liệu: {', '.join(popular_provinces)}"
+                else:
+                    suggestion = f"Một số tỉnh có dữ liệu: {', '.join(available_provinces[:3])}"
+            
+            return False, f"❌ Không tìm thấy dữ liệu cho '{extracted_province}'. {suggestion}."
+        
+        # Sử dụng LLM nếu có
+        available_provinces_str = ", ".join(available_provinces)
+        
+        prompt = f"""
+Bạn là trợ lý thông minh về dữ liệu khu công nghiệp Việt Nam.
+
+DANH SÁCH TỈNH/THÀNH PHỐ CÓ DỮ LIỆU:
+{available_provinces_str}
+
+CÂU HỎI NGƯỜI DÙNG: "{question}"
+TỈNH ĐƯỢC TRÍCH XUẤT: "{extracted_province}"
+
+NHIỆM VỤ:
+1. Kiểm tra tỉnh được trích xuất có trong danh sách không
+2. Nếu KHÔNG có, đưa ra phản hồi thông minh:
+   - Thông báo tỉnh không có dữ liệu
+   - Gợi ý 2-3 tỉnh gần nhất hoặc tương tự có dữ liệu
+   - Giải thích ngắn gọn
+
+ĐỊNH DẠNG PHẢN HỒI:
+- Nếu tỉnh CÓ trong danh sách: trả về "VALID"
+- Nếu tỉnh KHÔNG có: trả về thông báo chi tiết bằng tiếng Việt
+
+CHỈ TRẢ VỀ MỘT TRONG HAI:
+- "VALID" (nếu tỉnh có dữ liệu)
+- Thông báo chi tiết (nếu tỉnh không có dữ liệu)
+"""
+
+        try:
+            from langchain_core.messages import HumanMessage
+            response = self.llm.invoke([HumanMessage(content=prompt)]).content.strip()
+            
+            if response == "VALID":
+                return True, ""
+            else:
+                return False, response
+                
+        except Exception as e:
+            print(f"⚠️ LLM check failed: {e}")
+            # Fallback về logic đơn giản đã viết ở trên
+            similar_provinces = []
+            for available_province in available_provinces:
+                available_normalized = self._normalize_text(available_province.lower())
+                province_words = set(province_normalized.split())
+                available_words = set(available_normalized.split())
+                if province_words.intersection(available_words):
+                    similar_provinces.append(available_province)
+            
+            if similar_provinces:
+                suggestion = f"Có thể bạn muốn tìm: {', '.join(similar_provinces[:3])}"
+            else:
+                popular_provinces = [p for p in available_provinces if any(keyword in self._normalize_text(p.lower()) 
+                               for keyword in ['ha noi', 'ho chi minh', 'da nang', 'binh duong', 'dong nai'])][:3]
+                if popular_provinces:
+                    suggestion = f"Một số tỉnh có dữ liệu: {', '.join(popular_provinces)}"
+                else:
+                    suggestion = f"Một số tỉnh có dữ liệu: {', '.join(available_provinces[:3])}"
+            
+            return False, f"❌ Không tìm thấy dữ liệu cho '{extracted_province}'. {suggestion}."
+
+    # ==========================================================
+    # 🧩 TRÍCH XUẤT TỈNH/THÀNH PHỐ - CẢI THIỆN
     # ==========================================================
     def extract_province(self, question: str) -> Optional[str]:
-        """Trích xuất tên tỉnh/thành phố từ câu hỏi"""
-        if self.df is None or self.columns_map["province"] is None:
-            return None
-
-        question_norm = self._normalize_text(question.lower())
-        unique_provinces = self.df[self.columns_map["province"]].dropna().unique()
-
-        # match exact substring theo normalized
-        for prov in unique_provinces:
-            prov_str = str(prov).strip()
-            if not prov_str:
-                continue
-            prov_norm = self._normalize_text(prov_str)
-            if prov_norm and prov_norm in question_norm:
-                return prov_str
-
-        if any(k in question_norm for k in ["toan quoc", "ca nuoc", "viet nam", "vn"]):
-            return "TOÀN QUỐC"
-
-        return None
+        """Trích xuất tên tỉnh/thành phố từ câu hỏi sử dụng LLM analysis."""
+        analysis = self._analyze_query_with_llm(question)
+        return analysis.get("province")
 
     # ==========================================================
     # 🔡 CHUẨN HÓA TEXT (BỎ DẤU)
@@ -258,6 +632,60 @@ class ExcelQueryHandler:
             ]
 
         return df_filtered
+
+    def query_by_specific_name(self, specific_name: str, query_type: Optional[str]) -> Optional[pd.DataFrame]:
+        """
+        Tìm kiếm KCN/CCN theo tên cụ thể.
+        Sử dụng fuzzy matching để tìm tên gần nhất.
+        """
+        if self.df is None or self.columns_map["name"] is None:
+            return None
+
+        specific_name_norm = self._normalize_text(specific_name.lower())
+        
+        # Lọc theo loại KCN/CCN trước nếu có
+        df_to_search = self.df.copy()
+        if query_type and self.columns_map["type"] is not None:
+            df_to_search = df_to_search[
+                df_to_search[self.columns_map["type"]].astype(str).str.strip().str.upper() == query_type
+            ]
+
+        # Tìm kiếm exact match trước
+        exact_matches = df_to_search[
+            df_to_search[self.columns_map["name"]].astype(str).apply(
+                lambda x: self._normalize_text(x.lower()) == specific_name_norm
+            )
+        ]
+        
+        if not exact_matches.empty:
+            return exact_matches
+
+        # Tìm kiếm partial match (contains)
+        partial_matches = df_to_search[
+            df_to_search[self.columns_map["name"]].astype(str).apply(
+                lambda x: specific_name_norm in self._normalize_text(x.lower()) or 
+                         self._normalize_text(x.lower()) in specific_name_norm
+            )
+        ]
+        
+        if not partial_matches.empty:
+            return partial_matches
+
+        # Sử dụng fuzzy matching nếu có rapidfuzz
+        if process is not None and fuzz is not None:
+            all_names = df_to_search[self.columns_map["name"]].astype(str).tolist()
+            if all_names:
+                # Tìm tên gần nhất
+                result = process.extractOne(specific_name, all_names, scorer=fuzz.WRatio)
+                if result and result[1] >= 70:  # Threshold 70% cho tên KCN/CCN
+                    best_match = result[0]
+                    fuzzy_matches = df_to_search[
+                        df_to_search[self.columns_map["name"]].astype(str) == best_match
+                    ]
+                    return fuzzy_matches
+
+        # Không tìm thấy
+        return pd.DataFrame()
 
     # ==========================================================
     # 🧭 MATCH TỌA ĐỘ THEO TÊN KCN/CCN
@@ -307,7 +735,13 @@ class ExcelQueryHandler:
         - as_string=True: trả về chuỗi JSON
         - as_string=False: trả về dict (khuyến nghị khi dùng trong Flask)
         """
-        label = "khu" if query_type == "KCN" else "cụm" if query_type == "CCN" else "khu/cụm"
+        # Cải thiện label hiển thị
+        if query_type == "KCN":
+            label = "khu"
+        elif query_type == "CCN":
+            label = "cụm"
+        else:  # query_type is None - tất cả
+            label = "khu/cụm"
 
         if df is None or df.empty:
             obj = {
@@ -347,11 +781,105 @@ class ExcelQueryHandler:
 
             records.append(item)
 
+        # Cải thiện thông báo kết quả
+        if query_type is None:  # Tất cả loại
+            # Đếm số lượng từng loại
+            kcn_count = sum(1 for r in records if r.get("Loại", "").upper() == "KCN")
+            ccn_count = sum(1 for r in records if r.get("Loại", "").upper() == "CCN")
+            
+            if kcn_count > 0 and ccn_count > 0:
+                message = f"{province_name} có {kcn_count} khu công nghiệp và {ccn_count} cụm công nghiệp."
+            elif kcn_count > 0:
+                message = f"{province_name} có {kcn_count} khu công nghiệp."
+            elif ccn_count > 0:
+                message = f"{province_name} có {ccn_count} cụm công nghiệp."
+            else:
+                message = f"{province_name} có {len(records)} khu/cụm công nghiệp."
+        else:
+            message = f"{province_name} có {len(records)} {label} công nghiệp."
+
         obj = {
             "province": province_name,
             "type": query_type,
             "count": len(records),
-            "message": f"{province_name} có {len(records)} {label} công nghiệp.",
+            "message": message,
+            "data": records,
+            "not_found_coordinates": not_found
+        }
+
+        return json.dumps(obj, ensure_ascii=False, indent=2) if as_string else obj
+
+    def format_json_response_for_specific_name(
+        self,
+        df: pd.DataFrame,
+        specific_name: str,
+        query_type: Optional[str],
+        as_string: bool = True
+    ) -> Any:
+        """
+        Trả kết quả truy vấn theo tên cụ thể dạng JSON.
+        - as_string=True: trả về chuỗi JSON
+        - as_string=False: trả về dict (khuyến nghị khi dùng trong Flask)
+        """
+        # Cải thiện label hiển thị
+        if query_type == "KCN":
+            label = "khu"
+        elif query_type == "CCN":
+            label = "cụm"
+        else:  # query_type is None - tất cả
+            label = "khu/cụm"
+
+        if df is None or df.empty:
+            obj = {
+                "search_type": "specific_name",
+                "specific_name": specific_name,
+                "type": query_type,
+                "count": 0,
+                "message": f"Không tìm thấy {label} công nghiệp với tên '{specific_name}'.",
+                "data": [],
+                "not_found_coordinates": []
+            }
+            return json.dumps(obj, ensure_ascii=False, indent=2) if as_string else obj
+
+        cols = self.columns_map
+        records = []
+        not_found = []
+
+        for _, row in df.iterrows():
+            name_val = str(row.get(cols["name"], "")).strip()
+
+            coord = self._match_coordinates(name_val)
+
+            item = {
+                "Tỉnh/Thành phố": str(row.get(cols["province"], "")),
+                "Loại": str(row.get(cols["type"], "")),
+                "Tên": name_val,
+                "Địa chỉ": str(row.get(cols["address"], "")),
+                "Thời gian vận hành": str(row.get(cols["operation_time"], "")),
+                "Tổng diện tích": str(row.get(cols["area"], "")),
+                "Giá thuê đất": str(row.get(cols["rental_price"], "")),
+                "Ngành nghề": str(row.get(cols["industry"], "")),
+                # ✅ BỔ SUNG TỌA ĐỘ
+                "coordinates": coord
+            }
+
+            if coord is None and name_val:
+                not_found.append(name_val)
+
+            records.append(item)
+
+        # Tạo thông báo kết quả cho specific name search
+        if len(records) == 1:
+            message = f"Tìm thấy thông tin về '{specific_name}'."
+        else:
+            message = f"Tìm thấy {len(records)} kết quả phù hợp với '{specific_name}'."
+
+        obj = {
+            "search_type": "specific_name",
+            "specific_name": specific_name,
+            "type": query_type,
+            "count": len(records),
+            "message": message,
             "data": records,
             "not_found_coordinates": not_found
         }
@@ -363,7 +891,8 @@ class ExcelQueryHandler:
     # ==========================================================
     def process_query(self, question: str, return_json: bool = True) -> Tuple[bool, Optional[Any]]:
         """
-        Xử lý truy vấn và trả kết quả.
+        Xử lý truy vấn và trả kết quả sử dụng prompt-based analysis.
+        Hỗ trợ cả tìm kiếm theo tỉnh và theo tên KCN/CCN cụ thể.
         - return_json=True: trả JSON (mặc định)
             + trả về STRING JSON (để backward compatible)
         - return_json=False: trả text bảng (như cũ)
@@ -371,56 +900,145 @@ class ExcelQueryHandler:
         Return:
             (handled: bool, response: Optional[str|dict])
         """
-        if not self.is_count_query(question):
+        # Sử dụng LLM để phân tích toàn bộ câu hỏi một lần
+        analysis = self._analyze_query_with_llm(question)
+        
+        # Kiểm tra xem có phải câu hỏi về KCN/CCN không
+        if not analysis.get("is_industrial_query", False):
             return False, None
 
-        province = self.extract_province(question)
-        if province is None:
-            # Ở đây để "handled=True" hay "False" tuỳ bạn.
-            # Mình để True để phía server/frontend biết đây là nhánh Excel nhưng thiếu tỉnh.
-            err = {"error": "❓ Bạn vui lòng nêu rõ tỉnh/thành phố cần tra cứu."}
-            return True, json.dumps(err, ensure_ascii=False) if return_json else err["error"]
-
-        query_type = self.detect_type(question)
-        if query_type is None:
-            err = {"error": "❓ Bạn muốn tra cứu KHU công nghiệp hay CỤM công nghiệp? Vui lòng nêu rõ."}
-            return True, json.dumps(err, ensure_ascii=False) if return_json else err["error"]
-
-        df_result = self.query_by_province(province, query_type)
-
-        if return_json:
-            # ✅ trả string JSON để giữ tương thích code cũ
-            return True, self.format_json_response(df_result, province, query_type, as_string=True)
+        search_type = analysis.get("search_type", "province")
+        province = analysis.get("province")
+        specific_name = analysis.get("specific_name")
+        query_type = analysis.get("query_type")
+        
+        # Xử lý theo loại tìm kiếm
+        if search_type == "specific_name":
+            # Tìm kiếm theo tên KCN/CCN cụ thể
+            if specific_name is None:
+                error_message = "❓ Vui lòng cung cấp tên KCN/CCN cụ thể cần tìm kiếm."
+                err = {"error": error_message}
+                return True, json.dumps(err, ensure_ascii=False) if return_json else error_message
+            
+            # Truy vấn dữ liệu theo tên cụ thể
+            df_result = self.query_by_specific_name(specific_name, query_type)
+            
+            if df_result is None or df_result.empty:
+                error_message = f"❌ Không tìm thấy KCN/CCN với tên '{specific_name}'. Vui lòng kiểm tra lại tên hoặc thử tìm theo tỉnh/thành phố."
+                err = {"error": error_message}
+                return True, json.dumps(err, ensure_ascii=False) if return_json else error_message
+            
+            # Trả kết quả cho specific name search
+            if return_json:
+                return True, self.format_json_response_for_specific_name(df_result, specific_name, query_type, as_string=True)
+            else:
+                return True, self.format_table_response_for_specific_name(df_result, specific_name, query_type)
+        
         else:
-            return True, self.format_table_response(df_result, province, query_type)
+            # Tìm kiếm theo tỉnh (logic cũ)
+            # Kiểm tra tỉnh có hợp lệ không
+            if province is None:
+                error_message = self._generate_smart_error_message(question, province)
+                err = {"error": error_message}
+                return True, json.dumps(err, ensure_ascii=False) if return_json else error_message
+            
+            # Kiểm tra tỉnh có trong dữ liệu không
+            is_valid, error_message = self._smart_province_check(question, province)
+            if not is_valid:
+                err = {"error": error_message}
+                return True, json.dumps(err, ensure_ascii=False) if return_json else error_message
+
+            # Truy vấn dữ liệu theo tỉnh
+            df_result = self.query_by_province(province, query_type)
+
+            if return_json:
+                # ✅ trả string JSON để giữ tương thích code cũ
+                return True, self.format_json_response(df_result, province, query_type, as_string=True)
+            else:
+                return True, self.format_table_response(df_result, province, query_type)
 
     # ==========================================================
     # 🧩 GIỮ LẠI HÀM CŨ (BẢNG TEXT)
     # ==========================================================
     def format_table_response(self, df: pd.DataFrame, province_name: str, query_type: Optional[str]) -> str:
         """(Tuỳ chọn) Hiển thị kết quả dạng bảng text"""
-        label = "khu" if query_type == "KCN" else "cụm" if query_type == "CCN" else "khu/cụm"
+        # Cải thiện label hiển thị
+        if query_type == "KCN":
+            label = "khu"
+        elif query_type == "CCN":
+            label = "cụm"
+        else:  # query_type is None - tất cả
+            label = "khu/cụm"
 
         if df is None or df.empty:
             return f"Không tìm thấy {label} công nghiệp tại {province_name}."
 
         cols = self.columns_map
-        response = f"📊 {province_name} có {len(df)} {label} công nghiệp.\n\n"
+        
+        # Cải thiện thông báo kết quả cho text response
+        if query_type is None:  # Tất cả loại
+            # Đếm số lượng từng loại
+            kcn_count = sum(1 for _, row in df.iterrows() if str(row.get(cols["type"], "")).upper() == "KCN")
+            ccn_count = sum(1 for _, row in df.iterrows() if str(row.get(cols["type"], "")).upper() == "CCN")
+            
+            if kcn_count > 0 and ccn_count > 0:
+                response = f"📊 {province_name} có {kcn_count} khu công nghiệp và {ccn_count} cụm công nghiệp.\n\n"
+            elif kcn_count > 0:
+                response = f"📊 {province_name} có {kcn_count} khu công nghiệp.\n\n"
+            elif ccn_count > 0:
+                response = f"📊 {province_name} có {ccn_count} cụm công nghiệp.\n\n"
+            else:
+                response = f"📊 {province_name} có {len(df)} khu/cụm công nghiệp.\n\n"
+        else:
+            response = f"📊 {province_name} có {len(df)} {label} công nghiệp.\n\n"
+            
         for _, row in df.iterrows():
-            response += f"- {row.get(cols['name'], 'Không rõ')} ({row.get(cols['address'], '')})\n"
+            loai = str(row.get(cols['type'], '')).upper()
+            ten = row.get(cols['name'], 'Không rõ')
+            dia_chi = row.get(cols['address'], '')
+            response += f"- [{loai}] {ten} ({dia_chi})\n"
+        return response
+
+    def format_table_response_for_specific_name(self, df: pd.DataFrame, specific_name: str, query_type: Optional[str]) -> str:
+        """(Tuỳ chọn) Hiển thị kết quả tìm kiếm theo tên cụ thể dạng bảng text"""
+        # Cải thiện label hiển thị
+        if query_type == "KCN":
+            label = "khu"
+        elif query_type == "CCN":
+            label = "cụm"
+        else:  # query_type is None - tất cả
+            label = "khu/cụm"
+
+        if df is None or df.empty:
+            return f"Không tìm thấy {label} công nghiệp với tên '{specific_name}'."
+
+        cols = self.columns_map
+        
+        # Tạo thông báo kết quả cho specific name search
+        if len(df) == 1:
+            response = f"📊 Tìm thấy thông tin về '{specific_name}':\n\n"
+        else:
+            response = f"📊 Tìm thấy {len(df)} kết quả phù hợp với '{specific_name}':\n\n"
+            
+        for _, row in df.iterrows():
+            loai = str(row.get(cols['type'], '')).upper()
+            ten = row.get(cols['name'], 'Không rõ')
+            dia_chi = row.get(cols['address'], '')
+            tinh = row.get(cols['province'], '')
+            response += f"- [{loai}] {ten} - {tinh} ({dia_chi})\n"
         return response
 
 
 # ==========================================================
 # 🔌 TÍCH HỢP VÀO CHATBOT
 # ==========================================================
-def integrate_excel_to_chatbot(excel_path: str, geojson_path: Optional[str] = None):
+def integrate_excel_to_chatbot(excel_path: str, geojson_path: Optional[str] = None, llm=None):
     """Tích hợp module Excel vào chatbot"""
     if not Path(excel_path).exists():
         print(f"❌ Không tìm thấy file Excel: {excel_path}")
         return None
-    handler = ExcelQueryHandler(excel_path, geojson_path=geojson_path)
-    print("✅ Đã tích hợp module truy vấn Excel.")
+    handler = ExcelQueryHandler(excel_path, geojson_path=geojson_path, llm=llm)
+    print("✅ Đã tích hợp module truy vấn Excel với LLM support.")
     return handler
 
 
@@ -431,15 +1049,40 @@ if __name__ == "__main__":
     EXCEL_FILE = r"./data/IIPMap_FULL_63_COMPLETE.xlsx"
     GEOJSON_FILE = r"./map_ui/industrial_zones.geojson"  
 
-    handler = ExcelQueryHandler(EXCEL_FILE, geojson_path=GEOJSON_FILE)
+    # Khởi tạo LLM cho test
+    try:
+        from langchain_openai import ChatOpenAI
+        test_llm = ChatOpenAI(
+            model_name="gpt-4o-mini",
+            temperature=0
+        )
+        print("✅ LLM initialized for testing")
+    except:
+        test_llm = None
+        print("⚠️ LLM not available for testing")
+
+    handler = ExcelQueryHandler(EXCEL_FILE, geojson_path=GEOJSON_FILE, llm=test_llm)
 
     test_queries = [
         "Danh sách cụm công nghiệp ở Bắc Ninh",
-        "Danh sách khu công nghiệp ở Bắc Ninh"
+        "Danh sách khu công nghiệp ở Bắc Ninh",
+        "Danh sách khu và cụm công nghiệp ở Bắc Ninh",
+        "Danh sách tất cả khu công nghiệp và cụm công nghiệp ở Hà Nội",
+        "Vẽ biểu đồ cột về diện tích của khu công nghiệp ở Hồ Chí Minh",
+        "Vẽ biểu đồ cột về diện tích của cụm công nghiệp ở Đà Nẵng",
+        "Vẽ biểu đồ cột về diện tích của cả khu và cụm công nghiệp ở Bình Dương",
+        "Khu và cụm công nghiệp tỉnh Lai Châu",  # Test tỉnh không có dữ liệu
+        "Danh sách khu công nghiệp ở Điện Biên",  # Test tỉnh không có dữ liệu
+        # Test specific name searches
+        "cho tôi thông tin về KHU CÔNG NGHIỆP NGŨ LẠC - VĨNH LONG",
+        "thông tin về khu công nghiệp Sóng Thần",
+        "tìm cụm công nghiệp Tân Bình",
+        "KHU CÔNG NGHIỆP VSIP BẮC NINH",
+        "cụm công nghiệp Phú Mỹ"
     ]
 
     print("\n" + "=" * 80)
-    print("TEST MODULE TRẢ KẾT QUẢ DẠNG JSON (CÓ TỌA ĐỘ)")
+    print("TEST MODULE TRẢ KẾT QUẢ DẠNG JSON (CÓ TỌA ĐỘ + LLM SMART CHECK)")
     print("=" * 80)
 
     for query in test_queries:
