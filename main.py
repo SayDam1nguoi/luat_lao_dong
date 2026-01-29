@@ -260,7 +260,7 @@ async def predict(data: Question, request: Request):
             return {"answer": mst_answer, "requires_contact": False, "session_id": session}
 
         # ===============================
-        # 2️⃣ EXCEL VISUALIZE
+        # 2️⃣ EXCEL VISUALIZE + RAG
         # ===============================
         if is_excel_visualize_intent(question):
             if not CHATBOT_AVAILABLE:
@@ -270,13 +270,30 @@ async def predict(data: Question, request: Request):
                     "session_id": session
                 }
 
+            # Tạo biểu đồ từ structured data
             excel_result = await run_in_threadpool(
                 handle_excel_visualize,
                 message=question,
                 #excel_handler=app.excel_handler
             )
+            
+            # ✅ THÊM RAG ANALYSIS CHO BIỂU ĐỒ
+            if excel_result and isinstance(excel_result, dict):
+                try:
+                    rag_analysis = excel_kcn_handler.enhance_chart_with_rag(excel_result, question)
+                    if rag_analysis:
+                        excel_result["rag_analysis"] = rag_analysis
+                        excel_result["has_rag"] = True
+                        print("✅ Added RAG analysis to chart")
+                    else:
+                        excel_result["has_rag"] = False
+                        print("⚠️ No RAG analysis for chart")
+                except Exception as e:
+                    print(f"⚠️ Chart RAG enhancement error: {e}")
+                    excel_result["has_rag"] = False
+            
             return {
-                "answer": "Đây là biểu đồ do Chatiip tạo cho bạn: ",
+                "answer": "Đây là biểu đồ với phân tích chi tiết do ChatIIP tạo cho bạn:",
                 "type": "excel_visualize",
                 "payload": excel_result,
                 "requires_contact": False,
@@ -334,12 +351,13 @@ async def predict(data: Question, request: Request):
                         }
 
         # ===============================
-        # 4️⃣ EXCEL KCN/CCN (BẢNG + TỌA ĐỘ) - ƯU TIÊN TRƯỚC LLM
+        # 4️⃣ EXCEL KCN/CCN (BẢNG + TỌA ĐỘ + RAG) - ƯU TIÊN TRƯỚC LLM
         # ===============================
         handled, excel_payload = await run_in_threadpool(
             excel_kcn_handler.process_query,
             question,
-            True  # return_json=True
+            True,  # return_json=True
+            True   # enable_rag=True ✅ BẬT RAG
         )
 
         if handled and excel_payload:
@@ -357,6 +375,14 @@ async def predict(data: Question, request: Request):
                     "requires_contact": False,
                     "session_id": session
                 }
+
+            # Log RAG status
+            if isinstance(excel_obj, dict):
+                has_rag = excel_obj.get("has_rag", False)
+                if has_rag:
+                    print("✅ Excel query enhanced with RAG analysis")
+                else:
+                    print("⚠️ Excel query without RAG analysis")
 
             iz_list = []
             if isinstance(excel_obj, dict):
@@ -387,7 +413,7 @@ async def predict(data: Question, request: Request):
                 }
 
             return {
-                "answer": excel_obj,
+                "answer": excel_obj,  # ✅ Bao gồm RAG analysis
                 "type": "excel_query",
                 "map_intent": map_intent,
                 "requires_contact": False,

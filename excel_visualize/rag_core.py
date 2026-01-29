@@ -114,7 +114,10 @@ class ExcelQueryAgent:
         
         NHIỆM VỤ: Trích xuất JSON điều kiện lọc, DỮ LIỆU CẦN VẼ và DẠNG BIỂU ĐỒ.
         
-        1. "target_type": "Khu công nghiệp" hoặc "Cụm công nghiệp".
+        1. "target_type": Chọn MỘT trong ba giá trị sau:
+           - "Khu công nghiệp": Nếu chỉ hỏi về KCN
+           - "Cụm công nghiệp": Nếu chỉ hỏi về CCN  
+           - "Cả hai": Nếu hỏi về cả KCN và CCN (ví dụ: "khu và cụm công nghiệp")
         
         2. "filter_type": 
            - "province": Nếu user hỏi về Tỉnh.
@@ -142,13 +145,15 @@ class ExcelQueryAgent:
            - "operator": ">", "<", "=", ">=", "<=".
            - "value": Số thực.
         
+        QUAN TRỌNG: CHỈ TRẢ VỀ JSON HỢP LỆ, KHÔNG CÓ MARKDOWN, KHÔNG CÓ TEXT THÊM.
+        
         OUTPUT JSON:
         {{
-            "target_type": "...",
-            "filter_type": "province" | "specific_zones",
-            "search_keywords": ["..."],
-            "visualization_metric": "price" | "area" | "dual",
-            "chart_type": "bar" | "barh" | "pie" | "line",
+            "target_type": "Khu công nghiệp",
+            "filter_type": "province",
+            "search_keywords": ["Hải Phòng"],
+            "visualization_metric": "dual",
+            "chart_type": "bar",
             "numeric_filters": []
         }}
         """
@@ -178,7 +183,13 @@ class ExcelQueryAgent:
             # --- LOGIC LỌC PYTHON ---
             
             # 1. Lọc Loại
-            if "cụm" in target_type.lower():
+            if target_type == "Cả hai":
+                # Lấy cả KCN và CCN
+                type_mask = (
+                    self.df["Loại_norm"].str.contains("khu|kcn", na=False) |
+                    self.df["Loại_norm"].str.contains("cụm|ccn", na=False)
+                )
+            elif "cụm" in target_type.lower():
                 type_mask = self.df["Loại_norm"].str.contains("cụm|ccn", na=False)
             else:
                 type_mask = self.df["Loại_norm"].str.contains("khu|kcn", na=False)
@@ -246,7 +257,13 @@ class ExcelQueryAgent:
         query_lower = user_query.lower()
         
         # 1. Xác định target_type
-        if any(word in query_lower for word in ["cụm", "ccn"]):
+        if any(word in query_lower for word in ["khu và cụm", "kcn và ccn", "khu công nghiệp và cụm công nghiệp"]):
+            target_type = "Cả hai"
+            type_mask = (
+                self.df["Loại_norm"].str.contains("khu|kcn", na=False) |
+                self.df["Loại_norm"].str.contains("cụm|ccn", na=False)
+            )
+        elif any(word in query_lower for word in ["cụm", "ccn"]):
             target_type = "Cụm công nghiệp"
             type_mask = self.df["Loại_norm"].str.contains("cụm|ccn", na=False)
         else:

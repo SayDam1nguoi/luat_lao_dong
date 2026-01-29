@@ -1,0 +1,1046 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chatbot Test UI - IIP System</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2rem;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            opacity: 0.9;
+            font-size: 1.1rem;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 0;
+            min-height: 600px;
+        }
+
+        /* Chat Section */
+        .chat-section {
+            padding: 20px;
+            background: #f8f9fa;
+            border-right: 1px solid #e9ecef;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .chat-container {
+            flex: 1;
+            background: white;
+            border-radius: 8px;
+            border: 1px solid #e9ecef;
+            display: flex;
+            flex-direction: column;
+            min-height: 400px;
+            max-height: 500px;
+        }
+
+        .chat-header {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+            padding: 15px;
+            border-radius: 8px 8px 0 0;
+            font-weight: 600;
+            text-align: center;
+        }
+
+        .chat-messages {
+            flex: 1;
+            padding: 15px;
+            overflow-y: auto;
+            background: #fafafa;
+        }
+
+        .message {
+            margin-bottom: 15px;
+            display: flex;
+            align-items: flex-start;
+        }
+
+        .message.user {
+            justify-content: flex-end;
+        }
+
+        .message.bot {
+            justify-content: flex-start;
+        }
+
+        .message-content {
+            max-width: 80%;
+            padding: 12px 16px;
+            border-radius: 18px;
+            font-size: 14px;
+            line-height: 1.4;
+            word-wrap: break-word;
+        }
+
+        .message.user .message-content {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+            border-bottom-right-radius: 4px;
+        }
+
+        .message.bot .message-content {
+            background: white;
+            color: #333;
+            border: 1px solid #e9ecef;
+            border-bottom-left-radius: 4px;
+        }
+
+        .message-time {
+            font-size: 11px;
+            opacity: 0.7;
+            margin-top: 4px;
+        }
+
+        .chat-input-container {
+            padding: 15px;
+            background: white;
+            border-top: 1px solid #e9ecef;
+            border-radius: 0 0 8px 8px;
+        }
+
+        .chat-input-form {
+            display: flex;
+            gap: 10px;
+        }
+
+        .chat-input {
+            flex: 1;
+            padding: 10px 15px;
+            border: 1px solid #e9ecef;
+            border-radius: 20px;
+            font-size: 14px;
+            outline: none;
+        }
+
+        .chat-input:focus {
+            border-color: #4facfe;
+        }
+
+        .chat-send-btn {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-size: 14px;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: transform 0.2s ease;
+        }
+
+        .chat-send-btn:hover {
+            transform: translateY(-1px);
+        }
+
+        .chat-send-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .typing-indicator {
+            display: none;
+            padding: 12px 16px;
+            background: white;
+            border: 1px solid #e9ecef;
+            border-radius: 18px;
+            border-bottom-left-radius: 4px;
+            max-width: 80%;
+            margin-bottom: 15px;
+        }
+
+        .typing-dots {
+            display: flex;
+            gap: 4px;
+        }
+
+        .typing-dot {
+            width: 8px;
+            height: 8px;
+            background: #4facfe;
+            border-radius: 50%;
+            animation: typing 1.4s infinite ease-in-out;
+        }
+
+        .typing-dot:nth-child(1) {
+            animation-delay: -0.32s;
+        }
+
+        .typing-dot:nth-child(2) {
+            animation-delay: -0.16s;
+        }
+
+        @keyframes typing {
+
+            0%,
+            80%,
+            100% {
+                transform: scale(0.8);
+                opacity: 0.5;
+            }
+
+            40% {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        .clear-chat-btn {
+            background: #dc3545;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            font-size: 12px;
+            cursor: pointer;
+            margin-top: 10px;
+            transition: background 0.2s ease;
+        }
+
+        .clear-chat-btn:hover {
+            background: #c82333;
+        }
+
+        .response-type-badge {
+            display: inline-block;
+            background: #28a745;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 500;
+            margin-bottom: 8px;
+        }
+
+        .response-type-badge.excel_query {
+            background: #007bff;
+        }
+
+        .response-type-badge.excel_visualize {
+            background: #fd7e14;
+        }
+
+        .response-type-badge.kcn_detail {
+            background: #6f42c1;
+        }
+
+        .response-type-badge.text {
+            background: #6c757d;
+        }
+
+        .response-type-badge.error {
+            background: #dc3545;
+        }
+
+        /* Input Section */
+        .input-section {
+            padding: 30px;
+            background: #ffffff;
+            border-right: 1px solid #e9ecef;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        input[type="text"],
+        textarea,
+        select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s ease;
+        }
+
+        input[type="text"]:focus,
+        textarea:focus,
+        select:focus {
+            outline: none;
+            border-color: #4facfe;
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s ease;
+            width: 100%;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .test-examples {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border: 1px solid #e9ecef;
+        }
+
+        .test-examples h3 {
+            margin-bottom: 10px;
+            color: #333;
+            font-size: 1rem;
+        }
+
+        .example-btn {
+            display: inline-block;
+            background: #6c757d;
+            color: white;
+            padding: 6px 12px;
+            margin: 4px;
+            border-radius: 4px;
+            font-size: 12px;
+            cursor: pointer;
+            border: none;
+            transition: background 0.2s ease;
+        }
+
+        .example-btn:hover {
+            background: #5a6268;
+        }
+
+        .loading-spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #4facfe;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 10px;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        .endpoint-info {
+            background: #e9ecef;
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            font-size: 13px;
+            color: #6c757d;
+        }
+
+        .endpoint-info label {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 5px;
+        }
+
+        .endpoint-info input {
+            margin-bottom: 5px;
+        }
+
+        /* Output Section */
+        .output-section {
+            padding: 30px;
+            background: #f8f9fa;
+        }
+
+        .response-container {
+            background: #ffffff;
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 20px;
+            min-height: 400px;
+            border: 1px solid #e9ecef;
+        }
+
+        .response-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .response-title {
+            font-weight: 600;
+            color: #333;
+            font-size: 1.1rem;
+        }
+
+        .copy-btn {
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: background 0.2s ease;
+        }
+
+        .copy-btn:hover {
+            background: #218838;
+        }
+
+        .json-output {
+            background: #2d3748;
+            color: #e2e8f0;
+            padding: 15px;
+            border-radius: 6px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            line-height: 1.5;
+            overflow-x: auto;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            max-height: 500px;
+            overflow-y: auto;
+        }
+
+        .status {
+            padding: 10px;
+            border-radius: 6px;
+            margin-bottom: 15px;
+            font-weight: 500;
+        }
+
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .status.loading {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 1024px) {
+            .main-content {
+                grid-template-columns: 1fr 1fr;
+            }
+
+            .chat-section {
+                display: none;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+
+            .input-section {
+                border-right: none;
+                border-bottom: 1px solid #e9ecef;
+            }
+
+            .chat-section {
+                display: none;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🤖 Chatbot Test UI</h1>
+            <p>Test IIP Industrial Zone Chatbot System - Chat Interface + JSON Response Viewer</p>
+        </div>
+
+        <div class="main-content">
+            <!-- Chat Section -->
+            <div class="chat-section">
+                <h3 style="margin-bottom: 15px; color: #333;">💬 Chat Conversation</h3>
+
+                <div class="chat-container">
+                    <div class="chat-header">
+                        🤖 IIP Chatbot
+                    </div>
+
+                    <div class="chat-messages" id="chatMessages">
+                        <div class="message bot">
+                            <div class="message-content">
+                                Xin chào! Tôi là chatbot hỗ trợ thông tin về khu công nghiệp và cụm công nghiệp Việt
+                                Nam. Bạn có thể hỏi tôi về:
+                                <br><br>
+                                • Danh sách KCN/CCN theo tỉnh<br>
+                                • Biểu đồ và thống kê<br>
+                                • Thông tin chi tiết về KCN/CCN cụ thể
+                                <br><br>
+                                Hãy thử hỏi tôi nhé!
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="typing-indicator" id="typingIndicator">
+                        <div class="typing-dots">
+                            <div class="typing-dot"></div>
+                            <div class="typing-dot"></div>
+                            <div class="typing-dot"></div>
+                        </div>
+                    </div>
+
+                    <div class="chat-input-container">
+                        <form class="chat-input-form" id="chatInputForm">
+                            <input type="text" class="chat-input" id="chatInput" placeholder="Nhập câu hỏi của bạn..."
+                                required>
+                            <button type="submit" class="chat-send-btn" id="chatSendBtn">Gửi</button>
+                        </form>
+                    </div>
+                </div>
+
+                <button class="clear-chat-btn" onclick="clearChat()">🗑️ Xóa cuộc trò chuyện</button>
+            </div>
+
+            <!-- Input Section -->
+            <div class="input-section">
+                <div class="endpoint-info">
+                    <label for="endpoint-input" style="font-size: 13px; margin-bottom: 5px;">Endpoint:</label>
+                    <input type="text" id="endpoint-input" value="http://localhost:10000/chat"
+                        style="width: 100%; padding: 8px; font-size: 12px; border: 1px solid #ccc; border-radius: 4px;">
+                    <small style="color: #6c757d; font-size: 11px;">Thay đổi nếu server chạy ở port khác</small>
+                </div>
+
+                <form id="chatForm">
+                    <div class="form-group">
+                        <label for="question">Câu hỏi:</label>
+                        <textarea id="question" name="question" placeholder="Nhập câu hỏi của bạn..."
+                            required></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="session_id">Session ID (tùy chọn):</label>
+                        <input type="text" id="session_id" name="session_id" placeholder="Để trống sẽ tự động tạo">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="phone">Số điện thoại (tùy chọn):</label>
+                        <input type="text" id="phone" name="phone" placeholder="Số điện thoại">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="name">Tên (tùy chọn):</label>
+                        <input type="text" id="name" name="name" placeholder="Tên của bạn">
+                    </div>
+
+                    <button type="submit" class="btn" id="submitBtn">
+                        Gửi câu hỏi
+                    </button>
+                </form>
+
+                <div class="test-examples">
+                    <h3>📝 Ví dụ câu hỏi:</h3>
+                    <button class="example-btn" onclick="setExample('Danh sách khu công nghiệp ở Hà Nội')">KCN Hà
+                        Nội</button>
+                    <button class="example-btn" onclick="setExample('Danh sách cụm công nghiệp ở Thanh Hóa')">CCN Thanh
+                        Hóa</button>
+                    <button class="example-btn"
+                        onclick="setExample('Danh sách khu và cụm công nghiệp ở Hải Phòng')">KCN+CCN Hải Phòng</button>
+                    <button class="example-btn" onclick="setExample('Vẽ biểu đồ khu công nghiệp ở Hà Nội')">Biểu đồ
+                        KCN</button>
+                    <button class="example-btn"
+                        onclick="setExample('Vẽ biểu đồ về khu và cụm công nghiệp ở Hải Phòng')">Biểu đồ
+                        KCN+CCN</button>
+                    <button class="example-btn" onclick="setExample('Thông tin về khu công nghiệp VSIP')">Chi tiết
+                        KCN</button>
+                    <button class="example-btn" onclick="setExample('Detail KCN VSIP')">Detail Query</button>
+                    <button class="example-btn" onclick="setExample('Danh sách khu công nghiệp ở TP.HCM')">KCN
+                        TP.HCM</button>
+                </div>
+            </div>
+
+            <!-- Output Section -->
+            <div class="output-section">
+                <div class="response-header">
+                    <span class="response-title">📊 Kết quả JSON Response:</span>
+                    <button class="copy-btn" onclick="copyResponse()" id="copyBtn" style="display: none;">Copy
+                        JSON</button>
+                </div>
+
+                <div id="status" class="status" style="display: none;"></div>
+
+                <div class="response-container">
+                    <div class="json-output" id="jsonOutput">
+                        Chưa có kết quả. Hãy gửi một câu hỏi để xem JSON response.
+                    </div>
+                </div>
+
+                <div style="margin-top: 20px;">
+                    <h3>🔍 Thông tin Response:</h3>
+                    <div id="responseInfo" style="font-size: 13px; color: #6c757d; margin-top: 10px;">
+                        Sẽ hiển thị thông tin chi tiết về response sau khi gửi câu hỏi.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let currentResponse = null;
+        let chatHistory = [];
+
+        // Utility functions
+        function validateEndpoint(endpoint) {
+            if (!endpoint || endpoint.trim() === '') {
+                throw new Error('Endpoint URL không được để trống');
+            }
+
+            const trimmedEndpoint = endpoint.trim();
+            if (!trimmedEndpoint.startsWith('http://') && !trimmedEndpoint.startsWith('https://')) {
+                throw new Error('Endpoint URL phải bắt đầu bằng http:// hoặc https://');
+            }
+
+            return trimmedEndpoint;
+        }
+
+        function setExample(question) {
+            document.getElementById('question').value = question;
+            document.getElementById('chatInput').value = question;
+        }
+
+        function copyResponse() {
+            if (currentResponse) {
+                navigator.clipboard.writeText(JSON.stringify(currentResponse, null, 2)).then(() => {
+                    const btn = document.getElementById('copyBtn');
+                    const originalText = btn.textContent;
+                    btn.textContent = 'Copied!';
+                    btn.style.background = '#218838';
+                    setTimeout(() => {
+                        btn.textContent = originalText;
+                        btn.style.background = '#28a745';
+                    }, 2000);
+                }).catch(err => {
+                    console.error('Failed to copy: ', err);
+                    alert('Failed to copy to clipboard');
+                });
+            }
+        }
+
+        function showStatus(message, type) {
+            const statusEl = document.getElementById('status');
+            statusEl.textContent = message;
+            statusEl.className = `status ${type}`;
+            statusEl.style.display = 'block';
+        }
+
+        function hideStatus() {
+            const statusEl = document.getElementById('status');
+            statusEl.style.display = 'none';
+        }
+
+        function formatJSON(obj) {
+            const json = JSON.stringify(obj, null, 2);
+            return json
+                .replace(/(".*?")\s*:/g, '<span style="color: #9c88ff;">$1</span>:')
+                .replace(/:\s*(".*?")/g, ': <span style="color: #90ee90;">$1</span>')
+                .replace(/:\s*(\d+)/g, ': <span style="color: #ffa500;">$1</span>')
+                .replace(/:\s*(true|false)/g, ': <span style="color: #ff6b6b;">$1</span>')
+                .replace(/:\s*(null)/g, ': <span style="color: #888;">$1</span>');
+        }
+
+        function analyzeResponse(response) {
+            const info = [];
+
+            if (response.type) {
+                info.push(`<strong>Type:</strong> ${response.type}`);
+            }
+
+            if (response.answer && typeof response.answer === 'object') {
+                const answer = response.answer;
+                if (answer.province) info.push(`<strong>Province:</strong> ${answer.province}`);
+                if (answer.count !== undefined) info.push(`<strong>Count:</strong> ${answer.count}`);
+                if (answer.has_rag !== undefined) info.push(`<strong>RAG Analysis:</strong> ${answer.has_rag ? 'Yes' : 'No'}`);
+                if (answer.chart_type) info.push(`<strong>Chart Type:</strong> ${answer.chart_type}`);
+            }
+
+            if (response.payload && typeof response.payload === 'object') {
+                const payload = response.payload;
+                if (payload.province) info.push(`<strong>Payload Province:</strong> ${payload.province}`);
+                if (payload.count !== undefined) info.push(`<strong>Payload Count:</strong> ${payload.count}`);
+                if (payload.chart_type) info.push(`<strong>Payload Chart Type:</strong> ${payload.chart_type}`);
+            }
+
+            if (response.requires_contact !== undefined) {
+                info.push(`<strong>Requires Contact:</strong> ${response.requires_contact ? 'Yes' : 'No'}`);
+            }
+
+            if (response.session_id) {
+                info.push(`<strong>Session ID:</strong> ${response.session_id}`);
+            }
+
+            return info.length > 0 ? info.join('<br>') : 'No additional info available.';
+        }
+
+        // Chat functions
+        function addChatMessage(content, isUser = false, responseType = null) {
+            const chatMessages = document.getElementById('chatMessages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${isUser ? 'user' : 'bot'}`;
+
+            const now = new Date();
+            const timeStr = now.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+
+            let badgeHtml = '';
+            if (responseType && !isUser) {
+                badgeHtml = `<div class="response-type-badge ${responseType}">${responseType.toUpperCase()}</div>`;
+            }
+
+            messageDiv.innerHTML = `
+                <div class="message-content">
+                    ${badgeHtml}
+                    ${content}
+                    <div class="message-time">${timeStr}</div>
+                </div>
+            `;
+
+            chatMessages.appendChild(messageDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        function showTyping() {
+            const typingIndicator = document.getElementById('typingIndicator');
+            const chatMessages = document.getElementById('chatMessages');
+            chatMessages.appendChild(typingIndicator);
+            typingIndicator.style.display = 'block';
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        function hideTyping() {
+            const typingIndicator = document.getElementById('typingIndicator');
+            typingIndicator.style.display = 'none';
+        }
+
+        function clearChat() {
+            const chatMessages = document.getElementById('chatMessages');
+            chatMessages.innerHTML = `
+                <div class="message bot">
+                    <div class="message-content">
+                        Xin chào! Tôi là chatbot hỗ trợ thông tin về khu công nghiệp và cụm công nghiệp Việt Nam. Bạn có thể hỏi tôi về:
+                        <br><br>
+                        • Danh sách KCN/CCN theo tỉnh<br>
+                        • Biểu đồ và thống kê<br>
+                        • Thông tin chi tiết về KCN/CCN cụ thể
+                        <br><br>
+                        Hãy thử hỏi tôi nhé!
+                    </div>
+                </div>
+            `;
+            chatHistory = [];
+        }
+
+        function formatBotResponse(response) {
+            try {
+                if (typeof response.answer === 'string') {
+                    return response.answer;
+                } else if (typeof response.answer === 'object' && response.answer !== null) {
+                    const answer = response.answer;
+
+                    if (response.type === 'excel_query') {
+                        let result = `📊 <strong>${answer.message || 'Kết quả tìm kiếm'}</strong><br><br>`;
+
+                        if (answer.data && Array.isArray(answer.data) && answer.data.length > 0) {
+                            result += `<strong>Tỉnh:</strong> ${answer.province || 'N/A'}<br>`;
+                            result += `<strong>Số lượng:</strong> ${answer.count || 0}<br><br>`;
+
+                            const itemsToShow = Math.min(5, answer.data.length);
+                            for (let i = 0; i < itemsToShow; i++) {
+                                const item = answer.data[i];
+                                result += `${i + 1}. <strong>${item.Tên || 'N/A'}</strong><br>`;
+                                result += `   📍 ${item['Địa chỉ'] || 'N/A'}<br>`;
+                                if (item.coordinates) {
+                                    result += `   🗺️ Có tọa độ<br>`;
+                                }
+                                result += `<br>`;
+                            }
+
+                            if (answer.data.length > itemsToShow) {
+                                result += `... và ${answer.data.length - itemsToShow} mục khác<br>`;
+                            }
+
+                            if (answer.has_rag) {
+                                result += `<br>📈 <em>Đã bổ sung phân tích RAG</em>`;
+                            }
+                        }
+
+                        return result;
+                    } else if (response.type === 'excel_visualize') {
+                        const payload = response.payload || {};
+                        return `📊 <strong>Biểu đồ đã được tạo thành công!</strong><br><br>` +
+                            `<strong>Tỉnh:</strong> ${payload.province || 'N/A'}<br>` +
+                            `<strong>Số lượng dữ liệu:</strong> ${payload.count || 0}<br>` +
+                            `<strong>Loại biểu đồ:</strong> ${payload.chart_type || 'N/A'}<br><br>` +
+                            `🎨 Biểu đồ đã được tạo với dữ liệu chi tiết.` +
+                            (payload.has_rag ? `<br><br>📈 <em>Đã bổ sung phân tích RAG</em>` : '');
+                    } else if (response.type === 'kcn_detail') {
+                        const kcnInfo = answer.kcn_info || {};
+                        let result = `🏭 <strong>Thông tin chi tiết KCN/CCN</strong><br><br>`;
+                        result += `<strong>Tên:</strong> ${kcnInfo.Tên || 'N/A'}<br>`;
+                        result += `<strong>Địa chỉ:</strong> ${kcnInfo['Địa chỉ'] || 'N/A'}<br>`;
+                        result += `<strong>Tỉnh:</strong> ${kcnInfo['Tỉnh/Thành phố'] || 'N/A'}<br>`;
+                        result += `<strong>Loại:</strong> ${kcnInfo.Loại || 'N/A'}<br>`;
+                        if (kcnInfo['Tổng diện tích']) {
+                            result += `<strong>Diện tích:</strong> ${kcnInfo['Tổng diện tích']}<br>`;
+                        }
+                        if (kcnInfo['Giá thuê đất']) {
+                            result += `<strong>Giá thuê:</strong> ${kcnInfo['Giá thuê đất']}<br>`;
+                        }
+                        if (answer.coordinates) {
+                            result += `<strong>Tọa độ:</strong> Có sẵn 🗺️<br>`;
+                        }
+                        if (answer.has_rag) {
+                            result += `<br>📈 <em>Đã bổ sung phân tích RAG chi tiết</em>`;
+                        }
+                        return result;
+                    } else if (answer.error) {
+                        return `❌ <strong>Lỗi:</strong> ${answer.error}`;
+                    } else {
+                        return `<pre>${JSON.stringify(answer, null, 2)}</pre>`;
+                    }
+                }
+
+                return response.answer || 'Không có phản hồi';
+            } catch (error) {
+                console.error('Error formatting bot response:', error);
+                return `❌ <strong>Lỗi hiển thị:</strong> ${error.message}`;
+            }
+        }
+
+        async function sendChatMessage(question) {
+            try {
+                addChatMessage(question, true);
+                showTyping();
+
+                const data = {
+                    question: question,
+                    session_id: `chat-session-${Date.now()}`,
+                    phone: null,
+                    name: null
+                };
+
+                const endpoint = validateEndpoint(document.getElementById('endpoint-input').value);
+
+                const response = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(data)
+                });
+
+                hideTyping();
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const result = await response.json();
+
+                const responseType = result.type || 'text';
+                const botMessage = formatBotResponse(result);
+                addChatMessage(botMessage, false, responseType);
+
+                currentResponse = result;
+
+                const jsonOutput = document.getElementById('jsonOutput');
+                const responseInfo = document.getElementById('responseInfo');
+                const copyBtn = document.getElementById('copyBtn');
+
+                jsonOutput.innerHTML = formatJSON(result);
+                responseInfo.innerHTML = analyzeResponse(result);
+                copyBtn.style.display = 'inline-block';
+
+                showStatus('✅ Thành công! Đã nhận được response.', 'success');
+                setTimeout(hideStatus, 3000);
+
+            } catch (error) {
+                hideTyping();
+                console.error('Error:', error);
+                addChatMessage(`❌ <strong>Lỗi:</strong> ${error.message}`, false, 'error');
+                showStatus(`❌ Lỗi: ${error.message}`, 'error');
+                setTimeout(hideStatus, 5000);
+            }
+        }
+
+        // Event listeners
+        document.getElementById('chatInputForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const chatInput = document.getElementById('chatInput');
+            const chatSendBtn = document.getElementById('chatSendBtn');
+            const question = chatInput.value.trim();
+
+            if (!question) return;
+
+            chatSendBtn.disabled = true;
+            chatInput.disabled = true;
+
+            await sendChatMessage(question);
+
+            chatInput.value = '';
+            chatSendBtn.disabled = false;
+            chatInput.disabled = false;
+            chatInput.focus();
+        });
+
+        document.getElementById('chatForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const submitBtn = document.getElementById('submitBtn');
+            const jsonOutput = document.getElementById('jsonOutput');
+            const responseInfo = document.getElementById('responseInfo');
+            const copyBtn = document.getElementById('copyBtn');
+
+            const formData = new FormData(e.target);
+            const data = {
+                question: formData.get('question'),
+                session_id: formData.get('session_id') || null,
+                phone: formData.get('phone') || null,
+                name: formData.get('name') || null
+            };
+
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<span class="loading-spinner"></span>Đang xử lý...';
+            showStatus('Đang gửi câu hỏi...', 'loading');
+            jsonOutput.textContent = 'Đang chờ response...';
+            copyBtn.style.display = 'none';
+
+            try {
+                const endpoint = validateEndpoint(document.getElementById('endpoint-input').value);
+
+                const response = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(data)
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const result = await response.json();
+                currentResponse = result;
+
+                showStatus('✅ Thành công! Đã nhận được response.', 'success');
+
+                jsonOutput.innerHTML = formatJSON(result);
+                responseInfo.innerHTML = analyzeResponse(result);
+                copyBtn.style.display = 'inline-block';
+
+                if (data.question) {
+                    addChatMessage(data.question, true);
+                    const responseType = result.type || 'text';
+                    const botMessage = formatBotResponse(result);
+                    addChatMessage(botMessage, false, responseType);
+                }
+
+            } catch (error) {
+                console.error('Error:', error);
+                showStatus(`❌ Lỗi: ${error.message}`, 'error');
+                jsonOutput.textContent = `Error: ${error.message}`;
+                responseInfo.textContent = 'Không thể phân tích response do lỗi.';
+                currentResponse = null;
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Gửi câu hỏi';
+                setTimeout(hideStatus, 3000);
+            }
+        });
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function () {
+            document.getElementById('session_id').placeholder = `test-session-${Date.now()}`;
+
+            // Fix hostname detection for file:// protocol
+            let currentHost = window.location.hostname;
+            if (!currentHost || currentHost === '' || window.location.protocol === 'file:') {
+                currentHost = 'localhost';
+            }
+            const endpoint = `http://${currentHost}:10000/chat`;
+            document.getElementById('endpoint-input').value = endpoint;
+
+            document.getElementById('chatInput').focus();
+        });
+    </script>
+</body>
+
+</html>

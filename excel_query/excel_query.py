@@ -260,28 +260,53 @@ VÍ DỤ SEARCH_TYPE = "specific_name":
 - "cho tôi thông tin về KHU CÔNG NGHIỆP NGŨ LẠC - VĨNH LONG" → {{"query_type": "KCN", "reasoning": "Tìm KCN cụ thể"}}
 - "thông tin về cụm công nghiệp ABC" → {{"query_type": "CCN", "reasoning": "Tìm CCN cụ thể"}}
 
-CHỈ TRẢ VỀ JSON:
+CHỈ TRẢ VỀ JSON (không có markdown, không có text thêm):
 """
 
         try:
             from langchain_core.messages import HumanMessage
-            response = self.llm.invoke([HumanMessage(content=prompt)]).content.strip()
             
-            # Debug: In ra response để kiểm tra
-            print(f"🔍 LLM raw response: '{response}'")
+            # Kiểm tra LLM có khả dụng không
+            if not hasattr(self.llm, 'invoke'):
+                print("⚠️ LLM does not have invoke method")
+                return self._fallback_keyword_analysis(question)
+            
+            # Gọi LLM với error handling
+            try:
+                llm_response = self.llm.invoke([HumanMessage(content=prompt)])
+                if not llm_response or not hasattr(llm_response, 'content'):
+                    print("⚠️ LLM returned invalid response object")
+                    return self._fallback_keyword_analysis(question)
+                
+                response = llm_response.content
+                if not isinstance(response, str):
+                    response = str(response)
+                
+                response = response.strip()
+                
+            except Exception as llm_error:
+                print(f"⚠️ LLM invoke error: {llm_error}")
+                return self._fallback_keyword_analysis(question)
             
             # Kiểm tra response có rỗng không
             if not response:
                 print("⚠️ LLM returned empty response")
                 return self._fallback_keyword_analysis(question)
             
+            # Debug: In ra response để kiểm tra (chỉ khi có lỗi)
+            # print(f"🔍 LLM raw response: '{response}'")
+            
             # Thử parse JSON
             import json
             try:
                 result = json.loads(response)
             except json.JSONDecodeError as json_error:
-                print(f"⚠️ JSON parse error: {json_error}")
-                print(f"⚠️ Raw response was: '{response}'")
+                # Chỉ log lỗi nếu response không rỗng
+                if response.strip():
+                    print(f"⚠️ JSON parse error: {json_error}")
+                else:
+                    print("⚠️ Empty response from LLM")
+                    return self._fallback_keyword_analysis(question)
                 
                 # Thử extract JSON từ response nếu có markdown format
                 import re
@@ -296,19 +321,23 @@ CHỈ TRẢ VỀ JSON:
                     cleaned_response = cleaned_response[:-3]  # Bỏ ```
                 
                 cleaned_response = cleaned_response.strip()
-                print(f"🧹 Cleaned response: '{cleaned_response}'")
+                
+                # Kiểm tra cleaned response có rỗng không
+                if not cleaned_response:
+                    print("⚠️ Cleaned response is empty")
+                    return self._fallback_keyword_analysis(question)
                 
                 # Thử parse lại
                 try:
                     result = json.loads(cleaned_response)
-                    print("✅ Successfully parsed cleaned JSON")
+                    # print("✅ Successfully parsed cleaned JSON")
                 except json.JSONDecodeError:
                     # Thử tìm JSON object trong text
                     json_match = re.search(r'\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}', cleaned_response, re.DOTALL)
                     if json_match:
                         try:
                             result = json.loads(json_match.group())
-                            print("✅ Successfully extracted JSON from response")
+                            # print("✅ Successfully extracted JSON from response")
                         except:
                             print("❌ Failed to extract JSON from response")
                             return self._fallback_keyword_analysis(question)
@@ -318,11 +347,16 @@ CHỈ TRẢ VỀ JSON:
             
             # Validate result
             required_keys = ["is_industrial_query", "search_type", "province", "specific_name", "query_type", "confidence", "reasoning"]
-            if all(key in result for key in required_keys):
-                return result
-            else:
-                print(f"⚠️ LLM response missing keys: {list(result.keys())}")
+            if not isinstance(result, dict):
+                print(f"⚠️ LLM response is not a dict: {type(result)}")
                 return self._fallback_keyword_analysis(question)
+                
+            if not all(key in result for key in required_keys):
+                missing_keys = [key for key in required_keys if key not in result]
+                print(f"⚠️ LLM response missing keys: {missing_keys}")
+                return self._fallback_keyword_analysis(question)
+            
+            return result
                 
         except Exception as e:
             print(f"⚠️ LLM analysis failed: {e}")
@@ -350,26 +384,54 @@ CHỈ TRẢ VỀ JSON:
                 "reasoning": "Không phải câu hỏi về khu/cụm công nghiệp"
             }
         
-        # Determine search type - simple heuristic
-        # If contains specific industrial zone keywords, likely specific name search
-        specific_indicators = ["khu cong nghiep", "cum cong nghiep", "thong tin ve", "cho toi thong tin"]
-        is_specific_search = any(indicator in question_norm for indicator in specific_indicators)
-        
-        # Extract province (simplified)
+        # Extract province first (improved with TP.HCM recognition)
         province = None
         specific_name = None
         search_type = "province"
         
         if self.df is not None and self.columns_map["province"] is not None:
             unique_provinces = self.df[self.columns_map["province"]].dropna().unique()
-            for prov in unique_provinces:
-                prov_norm = self._normalize_text(str(prov).lower())
-                if prov_norm in question_norm:
-                    province = str(prov)
-                    break
+            
+            # Special handling for TP.HCM variations
+            hcm_variations = [
+                "thanh pho ho chi minh", "tp ho chi minh", "tp.hcm", "tphcm", 
+                "ho chi minh", "hcm", "sai gon", "saigon"
+            ]
+            
+            # Check for TP.HCM variations first
+            for hcm_var in hcm_variations:
+                if hcm_var in question_norm:
+                    # Find the actual province name in data
+                    for prov in unique_provinces:
+                        prov_norm = self._normalize_text(str(prov).lower())
+                        if "ho chi minh" in prov_norm or "hcm" in prov_norm:
+                            province = str(prov)
+                            break
+                    if province:
+                        break
+            
+            # If not TP.HCM, check other provinces
+            if not province:
+                for prov in unique_provinces:
+                    prov_norm = self._normalize_text(str(prov).lower())
+                    if prov_norm in question_norm:
+                        province = str(prov)
+                        break
         
-        # If no province found but has specific indicators, treat as specific name search
-        if province is None and is_specific_search:
+        # Determine search type based on patterns
+        # Check for location indicators (province search)
+        location_indicators = ["o ", "tai ", "trong ", "tinh ", "thanh pho ", "danh sach"]
+        has_location_indicator = any(indicator in question_norm for indicator in location_indicators)
+        
+        # Check for specific name indicators
+        specific_indicators = ["thong tin ve", "cho toi thong tin", "chi tiet ve", "ve khu cong nghiep", "ve cum cong nghiep"]
+        has_specific_indicator = any(indicator in question_norm for indicator in specific_indicators)
+        
+        # Decision logic: prioritize province search if we found a province OR have location indicators
+        if province or has_location_indicator:
+            search_type = "province"
+            specific_name = None
+        elif has_specific_indicator:
             search_type = "specific_name"
             # Try to extract the specific name (simplified)
             if "khu cong nghiep" in question_norm:
@@ -889,13 +951,14 @@ CHỈ TRẢ VỀ MỘT TRONG HAI:
     # ==========================================================
     # ⚙️ XỬ LÝ TRUY VẤN NGƯỜI DÙNG
     # ==========================================================
-    def process_query(self, question: str, return_json: bool = True) -> Tuple[bool, Optional[Any]]:
+    def process_query(self, question: str, return_json: bool = True, enable_rag: bool = False) -> Tuple[bool, Optional[Any]]:
         """
         Xử lý truy vấn và trả kết quả sử dụng prompt-based analysis.
         Hỗ trợ cả tìm kiếm theo tỉnh và theo tên KCN/CCN cụ thể.
         - return_json=True: trả JSON (mặc định)
             + trả về STRING JSON (để backward compatible)
         - return_json=False: trả text bảng (như cũ)
+        - enable_rag=True: bổ sung RAG analysis
 
         Return:
             (handled: bool, response: Optional[str|dict])
@@ -930,7 +993,18 @@ CHỈ TRẢ VỀ MỘT TRONG HAI:
             
             # Trả kết quả cho specific name search
             if return_json:
-                return True, self.format_json_response_for_specific_name(df_result, specific_name, query_type, as_string=True)
+                result = self.format_json_response_for_specific_name(df_result, specific_name, query_type, as_string=False)
+                
+                # ✅ THÊM RAG ANALYSIS CHO SPECIFIC NAME
+                if enable_rag and isinstance(result, dict):
+                    rag_analysis = self.enhance_list_with_rag(result, question)
+                    if rag_analysis:
+                        result["rag_analysis"] = rag_analysis
+                        result["has_rag"] = True
+                    else:
+                        result["has_rag"] = False
+                
+                return True, json.dumps(result, ensure_ascii=False, indent=2)
             else:
                 return True, self.format_table_response_for_specific_name(df_result, specific_name, query_type)
         
@@ -952,8 +1026,19 @@ CHỈ TRẢ VỀ MỘT TRONG HAI:
             df_result = self.query_by_province(province, query_type)
 
             if return_json:
-                # ✅ trả string JSON để giữ tương thích code cũ
-                return True, self.format_json_response(df_result, province, query_type, as_string=True)
+                # ✅ trả dict để có thể thêm RAG analysis
+                result = self.format_json_response(df_result, province, query_type, as_string=False)
+                
+                # ✅ THÊM RAG ANALYSIS CHO PROVINCE QUERY
+                if enable_rag and isinstance(result, dict):
+                    rag_analysis = self.enhance_list_with_rag(result, question)
+                    if rag_analysis:
+                        result["rag_analysis"] = rag_analysis
+                        result["has_rag"] = True
+                    else:
+                        result["has_rag"] = False
+                
+                return True, json.dumps(result, ensure_ascii=False, indent=2)
             else:
                 return True, self.format_table_response(df_result, province, query_type)
 
@@ -1361,6 +1446,117 @@ CHỈ TRẢ VỀ MỘT TRONG HAI:
             
         except Exception as e:
             print(f"⚠️ RAG enhancement error: {e}")
+            return ""
+
+    def enhance_list_with_rag(self, query_result: Dict, question: str) -> str:
+        """
+        Sử dụng RAG để bổ sung thông tin cho danh sách KCN/CCN
+        """
+        if not self.llm:
+            return ""
+        
+        try:
+            # Trích xuất thông tin từ query result
+            province = query_result.get('province', 'N/A')
+            count = query_result.get('count', 0)
+            query_type = query_result.get('type', 'N/A')
+            
+            # Lấy tên một số KCN/CCN tiêu biểu
+            data = query_result.get('data', [])
+            sample_names = [item.get('Tên', '') for item in data[:5]]
+            sample_names_str = ', '.join(sample_names) if sample_names else 'N/A'
+            
+            # Tạo context-aware RAG query
+            if query_type == "KCN":
+                type_label = "khu công nghiệp"
+            elif query_type == "CCN":
+                type_label = "cụm công nghiệp"
+            else:
+                type_label = "khu và cụm công nghiệp"
+            
+            rag_query = f"""
+Phân tích tình hình {type_label} tại tỉnh {province}.
+
+Dữ liệu hiển thị {count} {type_label}, bao gồm: {sample_names_str}
+
+Hãy cung cấp thông tin chi tiết về:
+1. Tổng quan về tình hình phát triển {type_label} tại {province}
+2. Chính sách ưu đãi đầu tư và thu hút FDI của tỉnh
+3. Ngành nghề trọng điểm và lợi thế cạnh tranh
+4. Hạ tầng giao thông, logistics và kết nối vùng
+5. Chất lượng nguồn nhân lực và đào tạo
+6. Môi trường đầu tư và thủ tục hành chính
+7. Kế hoạch phát triển trong 5-10 năm tới
+8. So sánh với các tỉnh lân cận trong khu vực
+
+Câu hỏi gốc của người dùng: "{question}"
+
+Hãy trả lời một cách chi tiết và thực tế, tập trung vào thông tin hữu ích cho nhà đầu tư.
+"""
+            
+            # Gọi RAG system
+            if hasattr(self.llm, 'invoke'):
+                rag_response = self.llm.invoke(rag_query)
+                if isinstance(rag_response, str):
+                    return rag_response
+                elif hasattr(rag_response, 'content'):
+                    return rag_response.content
+                else:
+                    return str(rag_response)
+            
+            return ""
+            
+        except Exception as e:
+            print(f"⚠️ List RAG enhancement error: {e}")
+            return ""
+
+    def enhance_chart_with_rag(self, chart_data: Dict, question: str) -> str:
+        """
+        Sử dụng RAG để bổ sung phân tích cho biểu đồ
+        """
+        if not self.llm:
+            return ""
+        
+        try:
+            # Trích xuất thông tin từ chart data
+            province = chart_data.get('province', 'N/A')
+            chart_type = chart_data.get('chart_type', 'N/A')
+            data_count = len(chart_data.get('data', []))
+            
+            # Tạo context-aware RAG query
+            rag_query = f"""
+Phân tích biểu đồ {chart_type} về khu công nghiệp tại {province}.
+
+Dữ liệu hiển thị {data_count} khu công nghiệp.
+
+Hãy cung cấp phân tích chi tiết về:
+1. Tình hình phát triển khu công nghiệp tại {province}
+2. Chính sách ưu đãi đầu tư của tỉnh
+3. Ngành nghề trọng điểm và tiềm năng
+4. Hạ tầng giao thông và logistics
+5. So sánh với các tỉnh lân cận
+6. Xu hướng phát triển trong tương lai
+7. Phân tích dữ liệu từ biểu đồ và đưa ra nhận xét
+
+Câu hỏi gốc của người dùng: "{question}"
+
+Hãy trả lời một cách chi tiết, tập trung vào phân tích xu hướng và cơ hội đầu tư.
+"""
+            
+            # Gọi RAG system
+            if hasattr(self.llm, 'invoke'):
+                rag_response = self.llm.invoke(rag_query)
+                if isinstance(rag_response, str):
+                    return rag_response
+                elif hasattr(rag_response, 'content'):
+                    return rag_response.content
+                else:
+                    return str(rag_response)
+            
+            return ""
+            
+        except Exception as e:
+            print(f"⚠️ Chart RAG enhancement error: {e}")
             return ""
 
 
