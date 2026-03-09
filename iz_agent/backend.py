@@ -37,6 +37,29 @@ class IIPMapBackend:
             "industry": "Ngành nghề",
         }
         
+        # Phân chia 3 miền Việt Nam
+        self.regions = {
+            "Miền Bắc": [
+                "Hà Nội", "Hải Phòng", "Quảng Ninh", "Bắc Ninh", "Bắc Giang", 
+                "Hải Dương", "Hưng Yên", "Thái Bình", "Nam Định", "Ninh Bình",
+                "Vĩnh Phúc", "Phú Thọ", "Thái Nguyên", "Lạng Sơn", "Cao Bằng",
+                "Bắc Kạn", "Tuyên Quang", "Lào Cai", "Yên Bái", "Hà Giang",
+                "Điện Biên", "Lai Châu", "Sơn La", "Hòa Bình"
+            ],
+            "Miền Trung": [
+                "Thanh Hóa", "Nghệ An", "Hà Tĩnh", "Quảng Bình", "Quảng Trị",
+                "Thừa Thiên Huế", "Đà Nẵng", "Quảng Nam", "Quảng Ngãi", 
+                "Bình Định", "Phú Yên", "Khánh Hòa", "Ninh Thuận", "Bình Thuận",
+                "Kon Tum", "Gia Lai", "Đắk Lắk", "Đắk Nông", "Lâm Đồng"
+            ],
+            "Miền Nam": [
+                "Hồ Chí Minh", "Bình Dương", "Đồng Nai", "Bà Rịa - Vũng Tàu",
+                "Long An", "Tiền Giang", "Bến Tre", "Trà Vinh", "Vĩnh Long",
+                "Đồng Tháp", "An Giang", "Kiên Giang", "Cần Thơ", "Hậu Giang",
+                "Sóc Trăng", "Bạc Liêu", "Cà Mau", "Tây Ninh", "Bình Phước"
+            ]
+        }
+        
         # Load GeoJSON
         if geojson_path and Path(geojson_path).exists():
             try:
@@ -144,28 +167,109 @@ class IIPMapBackend:
         """Parser đơn giản - tự động nhận diện"""
         if pd.isna(val): return None
         
-        s = str(val).lower()
+        s = str(val).lower().strip()
+        
+        # ✅ KIỂM TRA CÁC GIÁ TRỊ KHÔNG HỢP LỆ TRƯỚC
+        # Nếu là "Đang cập nhật", "N/A", "TBA", v.v. → trả về None
+        invalid_values = ['đang cập nhật', 'dang cap nhat', 'n/a', 'na', 'tba', 'updating', 'unknown', 'không rõ', 'khong ro']
+        if any(invalid in s for invalid in invalid_values):
+            return None
         
         # Giá: có "giá", "price", "usd"
         if any(x in col_name.lower() for x in ['giá', 'price']) or 'usd' in s:
             s = s.replace("usd", "").replace("/m²/năm", "").replace("/m2/năm", "")
             if "-" in s:
                 parts = s.split("-")
-                try: return (self._extract_number(parts[0]) + self._extract_number(parts[1])) / 2
-                except: pass
+                try: 
+                    num1 = self._extract_number(parts[0])
+                    num2 = self._extract_number(parts[1])
+                    if num1 and num2:
+                        return (num1 + num2) / 2
+                except: 
+                    pass
         
         # Diện tích: có "diện tích", "area", "ha"  
         elif any(x in col_name.lower() for x in ['diện tích', 'area']) or 'ha' in s:
             s = s.replace("ha", "").replace("hecta", "")
         
-        # Tất cả: tách số
-        return self._extract_number(s) or 0
+        # Thời gian vận hành: KHÔNG parse ở đây (xử lý riêng)
+        elif any(x in col_name.lower() for x in ['thời gian', 'vận hành', 'operation']):
+            return None  # Sẽ xử lý riêng trong _create_operation_time_columns
+        
+        # ✅ Tất cả: tách số, nếu không có số thì trả về None (KHÔNG phải 0)
+        result = self._extract_number(s)
+        return result if result is not None else None
 
     def _create_numeric_columns(self):
         """Tạo cột số cho tất cả cột"""
         for col in self.df.columns:
             if col not in ['name_norm', 'type_norm', 'prov_norm']:
                 self.df[f"{col}_num"] = self.df[col].apply(lambda x: self._parse_smart(x, col))
+        
+        # Xử lý riêng cho "Thời gian vận hành"
+        self._create_operation_time_columns()
+    
+    def _create_operation_time_columns(self):
+        """Tạo các cột phụ trợ cho Thời gian vận hành"""
+        operation_col = None
+        for col in self.df.columns:
+            if any(keyword in col.lower() for keyword in ['thời gian', 'vận hành', 'operation']):
+                operation_col = col
+                break
+        
+        if not operation_col or operation_col not in self.df.columns:
+            return
+        
+        def parse_operation_time(val):
+            """Parse thời gian vận hành thành dict với nhiều thông tin
+            
+            Logic tính số năm vận hành:
+            - "2015 - 2065" → duration = 2065 - 2015 = 50 năm
+            - "50 năm" hoặc "50 năm kể từ..." → duration = 50 năm
+            """
+            if pd.isna(val):
+                return {'start': None, 'end': None, 'duration': None}
+            
+            s = str(val).strip()
+            result = {'start': None, 'end': None, 'duration': None}
+            
+            # Case 1: "2015 - 2065" hoặc "2015 – 2065" (năm bắt đầu - năm kết thúc)
+            # QUAN TRỌNG: Tính duration = năm kết thúc - năm bắt đầu
+            match = re.search(r'(\d{4})\s*[-–]\s*(\d{4})', s)
+            if match:
+                start_year = int(match.group(1))
+                end_year = int(match.group(2))
+                result['start'] = start_year
+                result['end'] = end_year
+                result['duration'] = end_year - start_year  # Công thức: năm phải - năm trái
+                return result
+            
+            # Case 2: "50 năm" hoặc "50 năm kể từ..." (chỉ có số năm)
+            # QUAN TRỌNG: Lấy số năm trực tiếp
+            match = re.search(r'(\d+)\s*năm', s)
+            if match:
+                duration = int(match.group(1))
+                result['duration'] = duration
+                # Không có start/end vì không biết năm cụ thể
+                return result
+            
+            # Case 3: Chỉ có 1 năm (năm bắt đầu) - KHÔNG tính duration
+            match = re.search(r'(\d{4})', s)
+            if match:
+                year = int(match.group(1))
+                result['start'] = year
+                # Không tính duration vì không có năm kết thúc
+                return result
+            
+            return result
+        
+        # Tạo các cột phụ trợ
+        parsed = self.df[operation_col].apply(parse_operation_time)
+        
+        # Chỉ lấy giá trị hợp lệ (>0), các giá trị None/0 sẽ bị loại bỏ khi filter
+        self.df[f"{operation_col}_start_num"] = parsed.apply(lambda x: x['start'] if x['start'] and x['start'] > 0 else None)
+        self.df[f"{operation_col}_end_num"] = parsed.apply(lambda x: x['end'] if x['end'] and x['end'] > 0 else None)
+        self.df[f"{operation_col}_duration_num"] = parsed.apply(lambda x: x['duration'] if x['duration'] and x['duration'] > 0 else None)
 
     def _get_numeric_column(self, col_name):
         """Tìm cột số - logic thông minh với ưu tiên từ khóa"""
@@ -175,7 +279,28 @@ class IIPMapBackend:
         if f"{col_name}_num" in self.df.columns:
             return f"{col_name}_num"
         
-        # 2. Ưu tiên tìm cột chính xác với từ khóa đặc biệt
+        # 2. Xử lý đặc biệt cho "Thời gian vận hành"
+        if any(keyword in col_name_lower for keyword in ['thời gian', 'vận hành', 'operation']):
+            # Tìm cột gốc
+            operation_col = None
+            for col in self.df.columns:
+                if any(kw in col.lower() for kw in ['thời gian', 'vận hành', 'operation']) and not col.endswith('_num'):
+                    operation_col = col
+                    break
+            
+            if operation_col:
+                # Phân loại theo từ khóa
+                if any(kw in col_name_lower for kw in ['bắt đầu', 'start', 'từ']):
+                    return f"{operation_col}_start_num"
+                elif any(kw in col_name_lower for kw in ['kết thúc', 'end', 'hết hạn', 'đến', 'hạn']):
+                    return f"{operation_col}_end_num"
+                elif any(kw in col_name_lower for kw in ['số năm', 'duration', 'thời hạn', 'năm']):
+                    return f"{operation_col}_duration_num"
+                else:
+                    # Mặc định: số năm vận hành
+                    return f"{operation_col}_duration_num"
+        
+        # 3. Ưu tiên tìm cột chính xác với từ khóa đặc biệt
         # Tránh nhầm lẫn giữa "hệ số sử dụng đất" và "diện tích"
         priority_keywords = {
             'lấp đầy': ['lấp đầy', 'occupancy'],
@@ -200,12 +325,12 @@ class IIPMapBackend:
                             continue
                         return f"{real_col}_num"
         
-        # 3. Thử tìm cột tương tự (fuzzy matching - fallback)
+        # 4. Thử tìm cột tương tự (fuzzy matching - fallback)
         for real_col in self.df.columns:
             if col_name_lower in real_col.lower() and f"{real_col}_num" in self.df.columns:
                 return f"{real_col}_num"
         
-        # 4. Thử mapping ngược từ tên thân thiện sang tên thật
+        # 5. Thử mapping ngược từ tên thân thiện sang tên thật
         for key, real_col_name in self.cols.items():
             if col_name_lower == key.lower() and f"{real_col_name}_num" in self.df.columns:
                 return f"{real_col_name}_num"
@@ -291,54 +416,218 @@ class IIPMapBackend:
         return None
 
     def query_flexible(self, filters: dict):
-        df_res = self.df.copy()
-        
-        # 1. LỌC LOẠI (KCN/CCN)
-        zone_type = filters.get("zone_type", "ALL")
-        if zone_type != "ALL":
-            if zone_type == "KCN":
-                df_res = df_res[df_res['type_norm'].str.contains("khu|kcn|ip|iz", regex=True, na=False)]
-            elif zone_type == "CCN":
-                df_res = df_res[df_res['type_norm'].str.contains("cụm|ccn|cluster", regex=True, na=False)]
+            df_res = self.df.copy()
 
-        # 2. LỌC SỐ HỌC (Numeric Filters) - ĐƠN GIẢN
-        for nf in filters.get("numeric_filters", []):
-            col = nf.get("col")
-            op = nf.get("op") 
-            val = float(nf.get("val", 0))
-            
-            numeric_col = self._get_numeric_column(col)
-            if numeric_col and numeric_col in self.df.columns:
-                if op == "<": df_res = df_res[df_res[numeric_col] < val]
-                elif op == ">": df_res = df_res[df_res[numeric_col] > val]
-                elif op == "<=": df_res = df_res[df_res[numeric_col] <= val]
-                elif op == ">=": df_res = df_res[df_res[numeric_col] >= val]
+            # Lấy logic mode (AND hoặc OR)
+            logic_mode = filters.get("logic_mode", "AND").upper()
 
-        # 3. LỌC CÁC CỘT KHÁC - ĐƠN GIẢN
-        for col, val in filters.items():
-            if col in ["zone_type", "numeric_filters"]: continue
-            
-            # Tìm cột thật
-            real_col = col if col in self.df.columns else None
-            if not real_col:
-                for c in self.df.columns:
-                    if col.lower() == c.lower():
-                        real_col = c
-                        break
-            
-            if real_col:
-                # Tự động nhận diện cột đặc biệt
-                if any(keyword in real_col.lower() for keyword in ['tỉnh', 'thành phố', 'province']):
-                    df_res = df_res[df_res['prov_norm'].str.contains(self._normalize(val), na=False)]
-                elif any(keyword in real_col.lower() for keyword in ['tên', 'name']) and not real_col.endswith('_num'):
-                    df_res = df_res[df_res['name_norm'].str.contains(self._normalize(val), na=False)]
-                else:
-                    df_res = df_res[df_res[real_col].astype(str).str.contains(str(val), case=False, na=False)]
+            # 1. LỌC LOẠI (KCN/CCN)
+            zone_type = filters.get("zone_type", "ALL")
+            if zone_type != "ALL":
+                try:
+                    if zone_type == "KCN":
+                        df_res = df_res[df_res['type_norm'].str.contains("khu|kcn|ip|iz", regex=True, na=False)]
+                    elif zone_type == "CCN":
+                        df_res = df_res[df_res['type_norm'].str.contains("cụm|ccn|cluster", regex=True, na=False)]
+                except Exception as e:
+                    print(f"❌ Error in zone_type filter: {e}")
 
-        return df_res
+            # 2. LỌC THEO MIỀN
+            region = filters.get("region")
+            if region:
+                provinces = self.get_provinces_by_region(region)
+                if provinces:
+                    region_pattern = "|".join([self._normalize(p) for p in provinces])
+                    df_res = df_res[df_res['prov_norm'].str.contains(region_pattern, regex=True, na=False)]
+
+            # 3. LỌC SỐ HỌC (Numeric Filters) với AND/OR
+            numeric_filters = filters.get("numeric_filters", [])
+
+            if isinstance(numeric_filters, dict):
+                converted_filters = []
+                for col_name, value in numeric_filters.items():
+                    clean_col = col_name.replace("_num", "")
+
+                    if isinstance(value, dict):
+                        converted_filters.append({
+                            "col": clean_col,
+                            "op": value.get("op", ">="),
+                            "val": value.get("val", 0)
+                        })
+                    else:
+                        converted_filters.append({
+                            "col": clean_col,
+                            "op": ">=",
+                            "val": value
+                        })
+                numeric_filters = converted_filters
+
+            if numeric_filters and logic_mode == "OR":
+                # OR logic: Tạo mask cho từng điều kiện, sau đó OR lại
+                masks = []
+                for nf in numeric_filters:
+                    if not isinstance(nf, dict):
+                        continue
+
+                    col = nf.get("col")
+                    op = nf.get("op", ">=")
+                    val = nf.get("val", 0)
+
+                    try:
+                        val = float(val)
+                    except (ValueError, TypeError):
+                        continue
+
+                    numeric_col = self._get_numeric_column(col)
+                    if numeric_col and numeric_col in df_res.columns:
+                        try:
+                            if op == "<":
+                                masks.append(df_res[numeric_col] < val)
+                            elif op == ">":
+                                masks.append(df_res[numeric_col] > val)
+                            elif op == "<=":
+                                masks.append(df_res[numeric_col] <= val)
+                            elif op == ">=":
+                                masks.append(df_res[numeric_col] >= val)
+                        except Exception as e:
+                            print(f"⚠️ Lỗi filter numeric {col}: {e}")
+
+                # Combine masks with OR
+                if masks:
+                    combined_mask = masks[0]
+                    for mask in masks[1:]:
+                        combined_mask = combined_mask | mask
+                    df_res = df_res[combined_mask]
+            else:
+                # AND logic (mặc định): Áp dụng từng điều kiện
+                for nf in numeric_filters:
+                    if not isinstance(nf, dict):
+                        continue
+
+                    col = nf.get("col")
+                    op = nf.get("op", ">=")
+                    val = nf.get("val", 0)
+
+                    try:
+                        val = float(val)
+                    except (ValueError, TypeError):
+                        continue
+
+                    numeric_col = self._get_numeric_column(col)
+                    if numeric_col and numeric_col in df_res.columns:
+                        try:
+                            # Lọc bỏ các giá trị None/NaN trước khi so sánh
+                            if op == "<":
+                                df_res = df_res[df_res[numeric_col].notna() & (df_res[numeric_col] < val)]
+                            elif op == ">":
+                                df_res = df_res[df_res[numeric_col].notna() & (df_res[numeric_col] > val)]
+                            elif op == "<=":
+                                df_res = df_res[df_res[numeric_col].notna() & (df_res[numeric_col] <= val)]
+                            elif op == ">=":
+                                df_res = df_res[df_res[numeric_col].notna() & (df_res[numeric_col] >= val)]
+                        except Exception as e:
+                            print(f"⚠️ Lỗi filter numeric {col}: {e}")
+
+            # 4. LỌC TEXT (Ngành nghề, địa chỉ, v.v.) với AND/OR
+            text_filters = filters.get("text_filters", [])
+
+            if text_filters and logic_mode == "OR":
+                # OR logic cho text filters
+                masks = []
+                for tf in text_filters:
+                    if not isinstance(tf, dict):
+                        continue
+
+                    col = tf.get("col")
+                    val = tf.get("val", "")
+
+                    real_col = col if col in df_res.columns else None
+                    if not real_col:
+                        for c in df_res.columns:
+                            if col.lower() == c.lower():
+                                real_col = c
+                                break
+
+                    if real_col and val:
+                        try:
+                            masks.append(df_res[real_col].astype(str).str.contains(str(val), case=False, na=False))
+                        except Exception as e:
+                            print(f"⚠️ Lỗi filter text {col}: {e}")
+
+                if masks:
+                    combined_mask = masks[0]
+                    for mask in masks[1:]:
+                        combined_mask = combined_mask | mask
+                    df_res = df_res[combined_mask]
+            else:
+                # AND logic cho text filters
+                for tf in text_filters:
+                    if not isinstance(tf, dict):
+                        continue
+
+                    col = tf.get("col")
+                    val = tf.get("val", "")
+
+                    real_col = col if col in df_res.columns else None
+                    if not real_col:
+                        for c in df_res.columns:
+                            if col.lower() == c.lower():
+                                real_col = c
+                                break
+
+                    if real_col and val:
+                        try:
+                            df_res = df_res[df_res[real_col].astype(str).str.contains(str(val), case=False, na=False)]
+                        except Exception as e:
+                            print(f"⚠️ Lỗi filter text {col}: {e}")
+
+            # 5. LỌC CÁC CỘT KHÁC (backward compatibility)
+            for col, val in filters.items():
+                if col in ["zone_type", "numeric_filters", "text_filters", "sort_by", "limit", "region", "logic_mode"]: 
+                    continue
+
+                real_col = col if col in df_res.columns else None
+                if not real_col:
+                    for c in df_res.columns:
+                        if col.lower() == c.lower():
+                            real_col = c
+                            break
+
+                if real_col:
+                    if any(keyword in real_col.lower() for keyword in ['tỉnh', 'thành phố', 'province']):
+                        df_res = df_res[df_res['prov_norm'].str.contains(self._normalize(val), na=False)]
+                    elif any(keyword in real_col.lower() for keyword in ['tên', 'name']) and not real_col.endswith('_num'):
+                        df_res = df_res[df_res['name_norm'].str.contains(self._normalize(val), na=False)]
+                    else:
+                        df_res = df_res[df_res[real_col].astype(str).str.contains(str(val), case=False, na=False)]
+
+            # 6. SẮP XẾP
+            sort_by = filters.get("sort_by")
+            if sort_by:
+                sort_col = sort_by.get("col")
+                sort_order = sort_by.get("order", "desc")
+
+                if sort_col:
+                    numeric_col = self._get_numeric_column(sort_col)
+                    if numeric_col and numeric_col in df_res.columns:
+                        # ✅ LỌC BỎ GIÁ TRỊ KHÔNG HỢP LỆ (None, NaN, 0) TRƯỚC KHI SORT
+                        # Đặc biệt quan trọng cho "Giá thuê đất" có giá trị "Đang cập nhật"
+                        df_res = df_res[df_res[numeric_col].notna() & (df_res[numeric_col] > 0)]
+                        
+                        ascending = (sort_order == "asc")
+                        df_res = df_res.sort_values(by=numeric_col, ascending=ascending)
+
+            # 7. GIỚI HẠN SỐ LƯỢNG
+            limit = filters.get("limit")
+            if limit and isinstance(limit, int) and limit > 0:
+                df_res = df_res.head(limit)
+
+            return df_res
 
     def generate_chart_base64(self, df: pd.DataFrame, title: str, metric_col: str = "dual", limit: int = None):
-        if df.empty: return None
+        if df.empty:
+            print("⚠️ generate_chart_base64: DataFrame rỗng, trả về None")
+            return None
         df_plot = df.copy()
         
         # Xử lý limit
@@ -369,20 +658,32 @@ class IIPMapBackend:
                         area_col = col
                         break
             
+            # ✅ LỌC BỎ GIÁ TRỊ KHÔNG HỢP LỆ TRƯỚC KHI SORT VÀ VẼ
             if price_col and area_col:
+                # Lọc bỏ các dòng có giá hoặc diện tích không hợp lệ
+                df_plot = df_plot[(df_plot[price_col].notna()) & (df_plot[price_col] > 0) & 
+                                  (df_plot[area_col].notna()) & (df_plot[area_col] > 0)]
                 df_plot = df_plot.sort_values([price_col, area_col], ascending=False).head(limit)
             elif price_col:
+                # Chỉ lọc theo giá
+                df_plot = df_plot[(df_plot[price_col].notna()) & (df_plot[price_col] > 0)]
                 df_plot = df_plot.sort_values(price_col, ascending=False).head(limit)
             elif area_col:
+                # Chỉ lọc theo diện tích
+                df_plot = df_plot[(df_plot[area_col].notna()) & (df_plot[area_col] > 0)]
                 df_plot = df_plot.sort_values(area_col, ascending=False).head(limit)
             else:
+                print(f"⚠️ generate_chart_base64: Không tìm thấy cột giá hoặc diện tích cho dual chart")
                 return None
         else:
             # Tìm cột số tương ứng
             numeric_col = self._get_numeric_column(metric_col)
             if numeric_col and numeric_col in df_plot.columns:
+                # ✅ LỌC BỎ GIÁ TRỊ KHÔNG HỢP LỆ TRƯỚC KHI SORT VÀ VẼ
+                df_plot = df_plot[(df_plot[numeric_col].notna()) & (df_plot[numeric_col] > 0)]
                 df_plot = df_plot.sort_values(numeric_col, ascending=False).head(limit)
             else:
+                print(f"⚠️ generate_chart_base64: Không tìm thấy cột số cho metric '{metric_col}'")
                 return None
 
         df_plot = df_plot.iloc[::-1] # Đảo ngược để vẽ
@@ -462,5 +763,29 @@ class IIPMapBackend:
         buf.seek(0)
         b64 = base64.b64encode(buf.read()).decode('utf-8')
         plt.close()
+        
+        # Kiểm tra base64 có null không
+        if not b64 or b64 == "":
+            print("❌ generate_chart_base64: Chuỗi base64 rỗng!")
+            return None
+        
+        print(f"✅ generate_chart_base64: Đã tạo base64 thành công (độ dài: {len(b64)} ký tự)")
         return b64
+
+    def get_region_name(self, province: str) -> str:
+        """Lấy tên miền từ tên tỉnh"""
+        province_norm = self._normalize(province)
+        for region, provinces in self.regions.items():
+            for prov in provinces:
+                if self._normalize(prov) in province_norm or province_norm in self._normalize(prov):
+                    return region
+        return "Không xác định"
+
+    def get_provinces_by_region(self, region: str) -> list:
+        """Lấy danh sách tỉnh theo miền"""
+        region_norm = self._normalize(region)
+        for region_name, provinces in self.regions.items():
+            if region_norm in self._normalize(region_name):
+                return provinces
+        return []
 

@@ -1,9 +1,11 @@
-from langchain_core.tools import tool
+from langchain_core.tools import tool, StructuredTool
+from pydantic import BaseModel, Field
 from .backend import IIPMapBackend
 import json
 import uuid
 import os
 import math
+from typing import Union, Any, Dict
 from dotenv import load_dotenv
 
 # Load environment variables
@@ -103,20 +105,22 @@ def search_single_zone_tool(zone_name: str):
         # Không tìm thấy hoặc lỗi - đã được làm sạch rồi
         return cleaned_result
 
-@tool
-def search_flexible_tool(filter_json: str, view_option: str = "list"):
-    """
-    Tìm kiếm và vẽ biểu đồ. 
-    Lưu ý: Ảnh Base64 sẽ được lưu vào CHART_STORE, chỉ trả về chart_id cho AI.
-    """
-    try:
-        filters = json.loads(filter_json)
-    except:
-        return {"type": "error", "message": "Lỗi JSON input."}
-        
+# Pydantic model cho search_flexible_tool - chấp nhận bất kỳ field nào
+class FlexibleSearchInput(BaseModel):
+    """Input schema cho search_flexible_tool - chấp nhận dynamic fields"""
+    class Config:
+        extra = "allow"  # Cho phép thêm fields không khai báo
+    
+    view_option: str = Field(default="list", description="Tùy chọn hiển thị")
+
+def _search_flexible_impl(**kwargs):
+    """Implementation của search_flexible_tool"""
+    view_option = kwargs.pop("view_option", "list")
+    filters = kwargs  # Tất cả kwargs còn lại là filters
+    
     df_res = backend.query_flexible(filters)
     
-    prov_str = filters.get("Tỉnh/Thành phố", "Toàn quốc")
+    prov_str = filters.get("Tỉnh/Thành phố", "Kết quả")
     
     if df_res.empty:
         return {"type": "error", "message": "Không tìm thấy dữ liệu."}
@@ -177,32 +181,16 @@ def search_flexible_tool(filter_json: str, view_option: str = "list"):
     chart_id = None
     chart_type = "none"
     
-    print(f"🎨 view_option: {view_option}")
-    
     if view_option != "list":
         metric = 'dual'  # Giữ dual cho tương thích ngược
         if view_option.startswith('chart_'): 
             metric = view_option.replace("chart_", "")
             chart_type = "bar"
-            
-            # ✅ MAP TIẾNG ANH → TIẾNG VIỆT
-            metric_mapping = {
-                'occupancy': 'Hệ số sử dụng đất',
-                'area': 'Tổng diện tích',
-                'price': 'Giá thuê đất'
-            }
-            
-            if metric in metric_mapping:
-                metric = metric_mapping[metric]
-                print(f"🎨 Mapped metric: {metric}")
         
-        print(f"🎨 Creating chart with metric: {metric}")
         title = f"BIỂU ĐỒ {metric.upper()} - {prov_str}"
         
         # Vẽ ảnh với tất cả dữ liệu (KHÔNG GIỚI HẠN cho biểu đồ)
         base64_str = backend.generate_chart_base64(df_res, title, metric, limit=-1)  # -1 = unlimited
-        
-        print(f"🎨 Chart generated: {bool(base64_str)}, length: {len(base64_str) if base64_str else 0}")
         
         if base64_str:
             # ✅ BƯỚC QUAN TRỌNG: 
@@ -210,11 +198,6 @@ def search_flexible_tool(filter_json: str, view_option: str = "list"):
             # - Cất ảnh vào kho CHART_STORE
             chart_id = str(uuid.uuid4())
             CHART_STORE[chart_id] = base64_str
-            print(f"✅ Chart stored with ID: {chart_id}")
-        else:
-            print(f"⚠️ Chart generation returned None!")
-    else:
-        print(f"⚠️ view_option is 'list', skipping chart generation")
 
     # 3. TRẢ VỀ CHO AI (Gói tin siêu nhẹ - Không có Base64)
     total_found = len(df_res)
@@ -225,7 +208,7 @@ def search_flexible_tool(filter_json: str, view_option: str = "list"):
         "province": prov_str,
         "count": displayed_count,
         "total_found": total_found,  # Tổng số tìm thấy
-        "data": data_list,
+        "data_list": data_list,  # ← Đổi từ "data" thành "data_list"
         "message": f"Tìm thấy {total_found} kết quả, hiển thị {displayed_count} kết quả đầu tiên.",
         
         # ✅ AI chỉ nhìn thấy ID này (nhẹ 36 bytes), không phải chuỗi ảnh (500KB)
@@ -240,3 +223,12 @@ def search_flexible_tool(filter_json: str, view_option: str = "list"):
     
     # Làm sạch toàn bộ kết quả trước khi trả về
     return _clean_dict_completely(result)
+
+# Tạo StructuredTool với schema linh hoạt
+search_flexible_tool = StructuredTool.from_function(
+    func=_search_flexible_impl,
+    name="search_flexible_tool",
+    description="Tìm kiếm KCN/CCN với các điều kiện lọc linh hoạt. Hỗ trợ: zone_type, region, sort_by, limit, numeric_filters, và các điều kiện khác.",
+    args_schema=FlexibleSearchInput,
+    return_direct=False
+)
